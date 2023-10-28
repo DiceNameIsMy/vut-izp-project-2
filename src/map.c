@@ -13,6 +13,11 @@
 #define loginfo(s, ...)
 #endif
 
+int load_cell(Map *map, int r, int c)
+{
+    return map->cells[(r * map->cols) + c];
+}
+
 int load_map_size(Map *map, FILE *file)
 {
     int rows;
@@ -77,74 +82,88 @@ bool has_left_border(int cell) { return ((cell ^ 0b111) & 0b001) == 0b001; }
 bool has_right_border(int cell) { return ((cell ^ 0b111) & 0b010) == 0b010; }
 bool has_row_border(int cell) { return ((cell ^ 0b111) & 0b100) == 0b100; }
 
-int get_row_cell_idx(Map *map, int r, int c)
+bool check_right_border(Map *map, int cell, int r, int c)
 {
-    bool row_goes_down = ((r + c) & 0b1) == 1;
+    bool has_right_cell = (c + 1) <= map->cols;
+    if (!has_right_cell)
+        return true;
 
-    if (row_goes_down)
+    int right_cell_idx = (r * map->cols) + (c + 1);
+    int right_cell = map->cells[right_cell_idx];
+
+    if (has_right_border(cell) ^ has_left_border(right_cell))
     {
-        return ((r - 1) * map->cols) + c;
+        loginfo("map cell at %ix%i with value `%i` is in a mismatch with its right cell `%i`", r, c, cell, right_cell);
+        return false;
     }
-    return ((r + 1) * map->cols) + c;
+    return true;
 }
 
-bool cell_borders_valid(Map *map, int r, int c)
+bool check_left_border(Map *map, int cell, int r, int c)
 {
-    int cell_idx = (r * map->cols) + c;
-    int cell = map->cells[cell_idx];
-
     bool has_left_cell = (c - 1) > 0;
-    if (has_left_cell)
-    {
-        int left_cell_idx = (r * map->cols) + (c - 1);
-        int left_cell = map->cells[left_cell_idx];
+    if (!has_left_cell)
+        return true;
 
-        if (has_left_border(cell) ^ has_right_border(left_cell))
-        {
-            loginfo("map cell at %ix%i with value `%i` is in a mismatch with its left cell `%i`", r, c, cell, left_cell);
-            return false;
-        }
+    int left_cell_idx = (r * map->cols) + (c - 1);
+    int left_cell = map->cells[left_cell_idx];
+
+    if (has_right_border(left_cell) ^ has_left_border(cell))
+    {
+        loginfo("map cell at %ix%i with value `%i` is in a mismatch with its left cell `%i`", r, c, cell, left_cell);
+        return false;
     }
+    return true;
+}
 
-    bool has_right_cell = (c + 1) <= map->cols;
-    if (has_right_cell)
+bool check_updown_border(Map *map, int cell, int r, int c)
+{
+    bool cell_goes_down = ((r + c) & 0b1) == 1;
+
+    int updown_row = cell_goes_down ? r - 1 : r + 1;
+    bool has_updown_cell = 0 > updown_row && updown_row <= map->rows;
+
+    if (!has_updown_cell)
+        return true;
+
+    bool row_cell = map->cells[updown_row * c];
+
+    if (has_row_border(cell) ^ has_row_border(row_cell))
     {
-        int right_cell_idx = (r * map->cols) + (c + 1);
-        int right_cell = map->cells[right_cell_idx];
-
-        if (has_right_border(cell) ^ has_left_border(right_cell))
-        {
-            loginfo("map cell at %ix%i with value `%i` is in a mismatch with its right cell `%i`", r, c, cell, right_cell);
-            return false;
-        }
-    }
-
-    bool row_goes_down = ((r + c) & 0b1) == 1;
-    bool has_row_cell = row_goes_down ? ((r - 1) * map->cols) + c : ((r + 1) * map->cols) + c;
-
-    if (has_row_cell)
-    {
-        int row_idx = get_row_cell_idx(map, r, c);
-        bool row_cell = map->cells[row_idx];
-
-        if (has_row_border(cell) ^ has_row_border(row_cell))
-        {
-            loginfo("map cell at %ix%i with value `%i` is in a mismatch with its row cell `%i`", r, c, cell, row_cell);
-            return false;
-        }
+        loginfo("map cell at %ix%i with value `%i` is in a mismatch with its row cell `%i`", r, c, cell, row_cell);
+        return false;
     }
 
     return true;
 }
 
-bool map_borders_valid(Map *map)
+bool check_cell_valid(Map *map, int r, int c)
+{
+    int cell = load_cell(map, r, c);
+
+    bool left_border_valid = check_left_border(map, cell, r, c);
+    bool right_border_valid = check_right_border(map, cell, r, c);
+    bool updown_border_valid = check_updown_border(map, cell, r, c);
+
+    if (!left_border_valid || !right_border_valid || !updown_border_valid)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+bool check_map_valid(Map *map)
 {
     for (int row_idx = 1; row_idx <= map->rows; row_idx++)
     {
         for (int col_idx = 1; col_idx <= map->cols; col_idx++)
         {
-            if (!cell_borders_valid(map, row_idx, col_idx))
+            if (!check_cell_valid(map, row_idx, col_idx))
+            {
+                loginfo("map cell %ix%i is invalid", row_idx, col_idx);
                 return false;
+            }
         }
     }
     return true;
@@ -160,7 +179,7 @@ int construct_map(Map *map, FILE *file)
     if (load_map_cells(map, file) != 0)
         return 1;
 
-    if (!map_borders_valid(map))
+    if (!check_map_valid(map))
         return 1;
 
     return 0;
