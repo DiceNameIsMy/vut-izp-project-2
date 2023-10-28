@@ -139,6 +139,13 @@ class TestMazeTesting:
         assert result.stdout == "Invalid\n"
         assert result.debugless_stderr() == ""
 
+    def test_file_ends_abruptly(self):
+        result = run_program("--test tests/mazes/file_ends_abruptly.txt")
+
+        assert result.code == 0
+        assert result.stdout == "Invalid\n"
+        assert result.debugless_stderr() == ""
+
     def test_no_file(self):
         result = run_program("--test tests/mazes/not_existing.txt")
 
