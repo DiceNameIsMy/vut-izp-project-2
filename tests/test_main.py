@@ -83,6 +83,20 @@ class TestMazeTesting:
         assert result.stdout == "Valid\n"
         assert result.debugless_stderr() == ""
 
+    def test_spaces_in_size_line(self):
+        result = run_program("--test tests/mazes/many_spaces_in_size_line.txt")
+
+        assert result.code == 0
+        assert result.stdout == "Valid\n"
+        assert result.debugless_stderr() == ""
+
+    def test_spaces_between_cells(self):
+        result = run_program("--test tests/mazes/many_spaces_between_cells.txt")
+
+        assert result.code == 0
+        assert result.stdout == "Valid\n"
+        assert result.debugless_stderr() == ""
+
     def test_side_borders_mismatch(self):
         result = run_program("--test tests/mazes/side_border_mismatch.txt")
 
@@ -97,14 +111,14 @@ class TestMazeTesting:
         assert result.stdout == "Invalid\n"
         assert result.debugless_stderr() == ""
 
-    def test_invalid_zero_maze(self):
+    def test_zero_sized_maze(self):
         result = run_program("--test tests/mazes/zero_maze.txt")
 
         assert result.code == 0
         assert result.stdout == "Invalid\n"
         assert result.debugless_stderr() == ""
 
-    def test_no_grid(self):
+    def test_empty_maze(self):
         result = run_program("--test tests/mazes/empty_maze.txt")
 
         assert result.code == 0
