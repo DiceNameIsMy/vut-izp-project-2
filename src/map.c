@@ -80,7 +80,7 @@ int load_map_cells(Map *map, FILE *file)
 
 bool has_left_border(int cell) { return ((cell ^ 0b111) & 0b001) == 0b001; }
 bool has_right_border(int cell) { return ((cell ^ 0b111) & 0b010) == 0b010; }
-bool has_row_border(int cell) { return ((cell ^ 0b111) & 0b100) == 0b100; }
+bool has_updown_border(int cell) { return ((cell ^ 0b111) & 0b100) == 0b100; }
 
 bool check_right_border(Map *map, int cell, int r, int c)
 {
@@ -99,38 +99,21 @@ bool check_right_border(Map *map, int cell, int r, int c)
     return true;
 }
 
-bool check_left_border(Map *map, int cell, int r, int c)
-{
-    bool has_left_cell = (c - 1) > 0;
-    if (!has_left_cell)
-        return true;
-
-    int left_cell_idx = (r * map->cols) + (c - 1);
-    int left_cell = map->cells[left_cell_idx];
-
-    if (has_right_border(left_cell) ^ has_left_border(cell))
-    {
-        loginfo("map cell at %ix%i with value `%i` is in a mismatch with its left cell `%i`", r, c, cell, left_cell);
-        return false;
-    }
-    return true;
-}
-
-bool check_updown_border(Map *map, int cell, int r, int c)
+bool check_down_border(Map *map, int cell, int r, int c)
 {
     bool cell_goes_down = ((r + c) & 0b1) == 1;
-
-    int updown_row = cell_goes_down ? r - 1 : r + 1;
-    bool has_updown_cell = 0 > updown_row && updown_row <= map->rows;
-
-    if (!has_updown_cell)
+    if (!cell_goes_down)
         return true;
 
-    bool row_cell = map->cells[updown_row * c];
+    bool has_down_cell = (r + 1) <= map->rows;
+    if (!has_down_cell)
+        return true;
 
-    if (has_row_border(cell) ^ has_row_border(row_cell))
+    bool row_cell = map->cells[(r + 1) * c];
+
+    if (has_updown_border(cell) ^ has_updown_border(row_cell))
     {
-        loginfo("map cell at %ix%i with value `%i` is in a mismatch with its row cell `%i`", r, c, cell, row_cell);
+        loginfo("cell at %ix%i with value `%i` is in a mismatch with a cell beneath it with value `%i`", r, c, cell, row_cell);
         return false;
     }
 
@@ -141,11 +124,10 @@ bool check_cell_valid(Map *map, int r, int c)
 {
     int cell = load_cell(map, r, c);
 
-    bool left_border_valid = check_left_border(map, cell, r, c);
     bool right_border_valid = check_right_border(map, cell, r, c);
-    bool updown_border_valid = check_updown_border(map, cell, r, c);
+    bool down_border_valid = check_down_border(map, cell, r, c);
 
-    if (!left_border_valid || !right_border_valid || !updown_border_valid)
+    if (!right_border_valid || !down_border_valid)
     {
         return false;
     }
