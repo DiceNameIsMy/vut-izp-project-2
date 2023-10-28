@@ -83,8 +83,15 @@ class TestMazeTesting:
         assert result.stdout == "Valid\n"
         assert result.debugless_stderr() == ""
 
-    def test_cells_borders_mismatch(self):
-        result = run_program("--test tests/mazes/cells_borders_mismatch.txt")
+    def test_side_borders_mismatch(self):
+        result = run_program("--test tests/mazes/side_border_mismatch.txt")
+
+        assert result.code == 0
+        assert result.stdout == "Invalid\n"
+        assert result.debugless_stderr() == ""
+
+    def test_updown_borders_mismatch(self):
+        result = run_program("--test tests/mazes/updown_border_mismatch.txt")
 
         assert result.code == 0
         assert result.stdout == "Invalid\n"
