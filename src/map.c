@@ -13,17 +13,13 @@
 #define loginfo(s, ...)
 #endif
 
-int load_cell(Map *map, int r, int c)
-{
-    return map->cells[(r * map->cols) + c];
-}
-
 int load_map_size(Map *map, FILE *file)
 {
     int rows;
     int columns;
 
     int r = fscanf(file, "%i %i\n", &rows, &columns);
+
     bool loaded_both_items = r == 2;
 
     if (!loaded_both_items || rows < 1 || columns < 1)
@@ -120,9 +116,14 @@ bool check_down_border(Map *map, int cell, int r, int c)
     return true;
 }
 
+int get_cell(Map *map, int r, int c)
+{
+    return map->cells[(r * map->cols) + c];
+}
+
 bool check_cell_valid(Map *map, int r, int c)
 {
-    int cell = load_cell(map, r, c);
+    int cell = get_cell(map, r, c);
 
     bool right_border_valid = check_right_border(map, cell, r, c);
     bool down_border_valid = check_down_border(map, cell, r, c);
