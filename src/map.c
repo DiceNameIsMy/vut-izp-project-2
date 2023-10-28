@@ -45,10 +45,10 @@ int load_map_cells(Map *map, FILE *file)
         }
         else if (c == '\n')
         {
-            bool all_columns_set = (column - 1) != map->cols;
-            if (all_columns_set)
+            bool all_columns_set = (column - 1) == map->cols;
+            if (!all_columns_set)
             {
-                loginfo("tried moving to a next row %i->%i but not all columns were set (%i out of %i)", row, row + 1, column, map->cols);
+                loginfo("tried moving to a next row %i->%i but not all columns were set (%i out of %i)", row, row + 1, column - 1, map->cols);
                 return 1;
             }
 
