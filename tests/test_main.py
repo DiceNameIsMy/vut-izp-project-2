@@ -51,8 +51,8 @@ def make():
 
 
 class TestDisplayHelp:
-    HELP_TEXT = """Usage: ./maze [options] file...
-Options:
+    HELP_TEXT = """Usage: ./maze [option] file...
+Option:
   --help
   --test
   --rpath

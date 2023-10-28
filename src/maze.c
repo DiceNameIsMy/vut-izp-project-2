@@ -6,8 +6,8 @@
 #include "map.h"
 
 static const char HELP_TEXT[] = ""
-                                "Usage: ./maze [options] file...\n"
-                                "Options:\n"
+                                "Usage: ./maze [option] file...\n"
+                                "Option:\n"
                                 "  --help\n"
                                 "  --test\n"
                                 "  --rpath\n"
