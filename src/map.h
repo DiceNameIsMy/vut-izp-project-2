@@ -3,9 +3,9 @@
 
 typedef struct
 {
-    int rows;
-    int cols;
-    unsigned char *cells;
+     int rows;
+     int cols;
+     unsigned char *cells;
 } Map;
 
 int construct_map(Map *map, FILE *file);
