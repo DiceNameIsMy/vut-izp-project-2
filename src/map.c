@@ -173,6 +173,23 @@ void destruct_map(Map *map)
      free(map->cells);
 }
 
-bool isborder(Map *map, int r, int c, int border);
+bool isborder(Map *map, int r, int c, int border)
+{
+     if (border == 0b01)
+     {
+          return has_left_border(map[r, c]);
+     }
+     else if (border == 0b10)
+     {
+          return has_right_border(map[r, c]);
+     }
+     else if (border == 0b11)
+     {
+          return has_updown_border(mar[r, c]);
+     }
+
+     loginfo("invalid border value `%i`", border);
+     return false;
+}
 
 int start_border(Map *map, int r, int c, int leftright);
