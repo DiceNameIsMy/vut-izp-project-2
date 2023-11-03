@@ -2,9 +2,9 @@
 #define MAP_H
 
 typedef struct {
-  int rows;
-  int cols;
-  unsigned char *cells;
+    int rows;
+    int cols;
+    unsigned char *cells;
 } Map;
 
 typedef enum { RIGHT_HAND, LEFT_HAND, SHORTEST } Strategy;
