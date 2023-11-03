@@ -14,8 +14,8 @@
 #define loginfo( s, ... )
 #endif
 
-typedef enum { OK, BAD_MAP, BAD_CELL } ProcessCharResult;
-typedef enum { RIGHT, LEFT, UPDOWN } TargetBorder;
+typedef enum processCharResult { OK, BAD_MAP, BAD_CELL } ProcessCharResult;
+typedef enum border { RIGHT, LEFT, UPDOWN } Border;
 
 int load_map_size( Map *map, FILE *file ) {
     int rows;
@@ -190,7 +190,7 @@ int construct_map( Map *map, FILE *file ) {
 
 void destruct_map( Map *map ) { free( map->cells ); }
 
-bool isborder( Map *map, int r, int c, TargetBorder border ) {
+bool isborder( Map *map, int r, int c, Border border ) {
     if ( border == RIGHT ) {
         return has_right_border( get_cell( map, r, c ) );
     } else if ( border == LEFT ) {
@@ -203,4 +203,4 @@ bool isborder( Map *map, int r, int c, TargetBorder border ) {
     return false;
 }
 
-int start_border( Map *map, int r, int c, Strategy leftright );
+void solve_maze( Map *map, int start_row, int start_column, Strategy strategy );
