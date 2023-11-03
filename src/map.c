@@ -14,6 +14,8 @@
 #define loginfo(s, ...)
 #endif
 
+typedef enum { OK, BAD_MAP, BAD_CELL } ProcessCharResult;
+
 int load_map_size(Map *map, FILE *file) {
     int rows;
     int columns;
@@ -31,40 +33,64 @@ int load_map_size(Map *map, FILE *file) {
     return 0;
 }
 
+int to_cell(char c) {
+    bool is_valid_cell = c >= '0' && c <= '7';
+    if (!is_valid_cell)
+        return -1;
+
+    return c - '0';
+}
+
+ProcessCharResult process_char(Map *map, char c, int *row_ptr, int *col_ptr) {
+    int row = *row_ptr;
+    int column = *col_ptr;
+
+    if (c == ' ') {
+        return OK;
+    } else if (c == '\n') {
+        bool all_columns_set = (column - 1) == map->cols;
+        if (!all_columns_set)
+            return BAD_MAP;
+
+        loginfo("moving to the next line %i->%i", row, row + 1);
+
+        (*row_ptr)++;
+        *col_ptr = 1;
+
+        return OK;
+    }
+
+    int cell = to_cell(c);
+    if (cell == -1) {
+        return BAD_CELL;
+    }
+
+    int cell_idx = (row * map->cols) + column;
+
+    loginfo("adding cell: %i", cell);
+    map->cells[cell_idx] = cell;
+    (*col_ptr)++;
+
+    return OK;
+}
+
 int load_map_cells(Map *map, FILE *file) {
     int row = 1;
     int column = 1;
 
     char c;
     while ((c = fgetc(file)) != EOF) {
-        if (c == ' ') {
-            continue;
-        } else if (c == '\n') {
-            bool all_columns_set = (column - 1) == map->cols;
-            if (!all_columns_set) {
-                loginfo("tried moving to a next row %i->%i but not all columns "
-                        "were set (%i out of %i)",
-                        row, row + 1, column - 1, map->cols);
-                return 1;
-            }
+        ProcessCharResult r = process_char(map, c, &row, &column);
 
-            loginfo("moving to the next line %i->%i", row, row + 1);
-            column = 1;
-            row++;
-            continue;
-        }
-
-        bool is_valid_cell = c >= '0' && c <= '7';
-        if (!is_valid_cell) {
+        if (r == BAD_MAP) {
+            loginfo("tried moving to a next row %i->%i but not all columns "
+                    "were set (%i out of %i)",
+                    row, row + 1, column - 1, map->cols);
+            return 1;
+        } else if (r == BAD_CELL) {
             loginfo("encountered char `%c` which is not a valid number", c);
             return 1;
         }
-
-        int cell = c - '0';
-        int cell_idx = (row * map->cols) + column;
-
-        map->cells[cell_idx] = cell;
-        column++;
     }
     return 0;
 }
