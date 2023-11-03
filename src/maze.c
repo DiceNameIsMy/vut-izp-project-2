@@ -74,6 +74,15 @@ int main(int argc, char *argv[]) {
 
     if (strcmp(flag, "--test") == 0) {
         test_maze(maze_filename);
+    } else if (strcmp(flag, "--rpath") == 0) {
+        fprintf(stderr, "--rpath is not implemented\n");
+        return 1;
+    } else if (strcmp(flag, "--lpath") == 0) {
+        fprintf(stderr, "--lpath is not implemented\n");
+        return 1;
+    } else if (strcmp(flag, "--shortest") == 0) {
+        fprintf(stderr, "--shortest is not implemented\n");
+        return 1;
     } else {
         fprintf(stderr, UNKNOWN_STATEGY_ERROR, flag);
     }
