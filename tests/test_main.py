@@ -50,7 +50,7 @@ def make():
         raise Exception(f"Error making the program: {result.stdout} \n {result.stderr}")
 
 
-class TestDisplayHelp:
+class TestInvalidArgs:
     HELP_TEXT = """Usage: ./maze [option] file...
 Option:
   --help
@@ -59,8 +59,11 @@ Option:
   --lpath
   --shortest
 """
+    INVALID_ARGS_MESSAGE = (
+        "Invalid amount of arguments. See --help for more information.\n"
+    )
 
-    def test_provide_flag(self):
+    def test_help_flag(self):
         result = run_program("--help")
 
         assert result.stdout == self.HELP_TEXT
@@ -73,6 +76,22 @@ Option:
         assert result.stdout == self.HELP_TEXT
         assert result.debugless_stderr() == ""
         assert result.code == 0
+
+    def test_more_than_1_flag(self):
+        result = run_program("--rpath --lpath tests/mazes/valid_maze.txt")
+
+        assert result.code == 1
+        assert result.stdout == ""
+        assert result.debugless_stderr() == self.INVALID_ARGS_MESSAGE
+
+    def test_more_than_1_maze(self):
+        result = run_program(
+            "--rpath tests/mazes/valid_maze.txt tests/mazes/valid_maze.txt"
+        )
+
+        assert result.code == 1
+        assert result.stdout == ""
+        assert result.debugless_stderr() == self.INVALID_ARGS_MESSAGE
 
 
 class TestMazeTesting:
@@ -154,30 +173,7 @@ class TestMazeTesting:
         assert result.debugless_stderr() == ""
 
 
-class TestRunSolver:
-    INVALID_FLAG_MESSAGE = (
-        "Only 1 flag can be provided. See --help for more information.\n"
-    )
-    INVALID_FILEPATH_MESSAGE = (
-        "Only 1 maze file path can be provided. See --help for more information.\n"
-    )
-
-    def test_more_than_1_flag(self):
-        result = run_program("--rpath --lpath tests/mazes/valid_maze.txt")
-
-        assert result.code == 1
-        assert result.stdout == ""
-        assert result.debugless_stderr() == self.INVALID_FLAG_MESSAGE
-
-    def test_more_than_1_maze_file_path(self):
-        result = run_program(
-            "--rpath tests/mazes/valid_maze.txt tests/mazes/valid_maze.txt"
-        )
-
-        assert result.code == 1
-        assert result.stdout == ""
-        assert result.debugless_stderr() == self.INVALID_FILEPATH_MESSAGE
-
+class TestRun:
     @pytest.mark.skip()
     def test_run_right_path(self):
         result = run_program("--rpath tests/mazes/valid_maze.txt")

@@ -13,10 +13,8 @@ static const char HELP_TEXT[] = ""
                                 "  --rpath\n"
                                 "  --lpath\n"
                                 "  --shortest\n";
-static const char ALGORITHM_NOT_PROVIDED_ERROR_TEXT[] =
-    "Only 1 flag can be provided. See --help for more information.\n";
-static const char TO_MANY_MAZES_ERROR_TEXT[] =
-    "Only 1 maze file path can be provided. See --help for more information.\n";
+static const char INVALID_ARGS_ERROR[] =
+    "Invalid amount of arguments. See --help for more information.\n";
 
 int main(int argc, char *argv[]) {
     char *flag = NULL;
@@ -28,13 +26,13 @@ int main(int argc, char *argv[]) {
 
         if (is_flag) {
             if (flag != NULL) {
-                fprintf(stderr, ALGORITHM_NOT_PROVIDED_ERROR_TEXT);
+                fprintf(stderr, INVALID_ARGS_ERROR);
                 return 1;
             }
             flag = argument;
         } else {
             if (maze_filename != NULL) {
-                fprintf(stderr, TO_MANY_MAZES_ERROR_TEXT);
+                fprintf(stderr, INVALID_ARGS_ERROR);
                 return 1;
             }
             maze_filename = argument;
