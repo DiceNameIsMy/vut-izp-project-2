@@ -60,15 +60,14 @@ Option:
   --shortest
 """
     INVALID_ARGS_MESSAGE = (
-        "Invalid amount of arguments. See --help for more information.\n"
+        "Invalid argument `{}`. Try `maze --help` for more information.\n"
     )
-
-    def test_help_flag(self):
-        result = run_program("--help")
-
-        assert result.stdout == self.HELP_TEXT
-        assert result.debugless_stderr() == ""
-        assert result.code == 0
+    INVALID_ARGS_AMOUNT_MESSAGE = (
+        "Invalid amount of arguments. Try `maze --help` for more information.\n"
+    )
+    UNKNOWN_STRATEGY_MESSAGE = (
+        "Unknown strategy `{}`. Try `maze --help` for more information.\n"
+    )
 
     def test_no_flags(self):
         result = run_program()
@@ -77,21 +76,44 @@ Option:
         assert result.debugless_stderr() == ""
         assert result.code == 0
 
+    def test_help_flag(self):
+        result = run_program("--help")
+
+        assert result.stdout == self.HELP_TEXT
+        assert result.debugless_stderr() == ""
+        assert result.code == 0
+
+    def test_containts_help_flag(self):
+        result = run_program("arg1 arg2 1 343 --help laa")
+
+        assert result.stdout == self.HELP_TEXT
+        assert result.debugless_stderr() == ""
+        assert result.code == 0
+
     def test_more_than_1_flag(self):
-        result = run_program("--rpath --lpath tests/mazes/valid_maze.txt")
+        result = run_program("--rpath --lpath 1 1 tests/mazes/valid_maze.txt")
 
         assert result.code == 1
         assert result.stdout == ""
-        assert result.debugless_stderr() == self.INVALID_ARGS_MESSAGE
+        assert result.debugless_stderr() == self.INVALID_ARGS_AMOUNT_MESSAGE
 
     def test_more_than_1_maze(self):
         result = run_program(
-            "--rpath tests/mazes/valid_maze.txt tests/mazes/valid_maze.txt"
+            "--rpath 1 1 tests/mazes/valid_maze.txt tests/mazes/valid_maze.txt"
         )
 
         assert result.code == 1
         assert result.stdout == ""
-        assert result.debugless_stderr() == self.INVALID_ARGS_MESSAGE
+        assert result.debugless_stderr() == self.INVALID_ARGS_AMOUNT_MESSAGE
+
+    def test_unknown_strategy(self):
+        result = run_program("--undefined 1 1 tests/mazes/valid_maze.txt")
+
+        assert result.code == 1
+        assert result.stdout == ""
+        assert result.debugless_stderr() == self.UNKNOWN_STRATEGY_MESSAGE.format(
+            "--undefined"
+        )
 
 
 class TestMazeTesting:
