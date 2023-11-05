@@ -37,12 +37,14 @@ int main( int argc, char *argv[] ) {
         char *flag = argv[ 1 ];
         char *maze_filename = argv[ 2 ];
 
-        if ( strcmp( flag, "--test" ) == 0 ) {
-            test_maze( maze_filename );
-            return 0;
+        bool has_test_flag = strcmp( flag, "--test" ) == 0;
+        if ( !has_test_flag ) {
+            fprintf( stderr, INVALID_ARGS_ERROR, flag );
+            return 1;
         }
-        fprintf( stderr, INVALID_ARGS_ERROR, flag );
-        return 1;
+
+        test_maze( maze_filename );
+        return 0;
 
     } else if ( argc == 5 ) {
         char *flag = argv[ 1 ];
