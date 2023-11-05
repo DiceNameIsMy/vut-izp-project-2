@@ -189,16 +189,14 @@ int construct_map( Map *map, FILE *file ) {
 
 void destruct_map( Map *map ) { free( map->cells ); }
 
+bool ( *border_solver[ 4 ] )( int cell ) = {
+    has_left_border,
+    has_right_border,
+    has_updown_border,
+    has_updown_border,
+};
+
 bool isborder( Map *map, int r, int c, Border border ) {
     int cell = get_cell( map, r, c );
-    if ( border == RIGHT ) {
-        return has_right_border( cell );
-    } else if ( border == LEFT ) {
-        return has_left_border( cell );
-    } else if ( border == UP || border == DOWN ) {
-        return has_updown_border( cell );
-    }
-
-    loginfo( "invalid border value `%i`", border );
-    return false;
+    return ( *border_solver[ border ] )( cell );
 }
