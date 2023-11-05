@@ -22,40 +22,13 @@ static const char INVALID_ARGS_AMOUNT_ERROR[] =
 static const char UNKNOWN_STRATEGY_ERROR[] =
     "Unknown strategy `%s`. Try `maze --help` for more information.\n";
 
-void test_maze( char *filename ) {
-    FILE *maze_file = fopen( filename, "r" );
-    if ( maze_file == NULL ) {
-        printf( "Invalid\n" );
-        return;
-    }
+void test_maze( char *filename );
 
-    Map map;
-    int r = construct_map( &map, maze_file );
-    if ( r != 0 ) {
-        printf( "Invalid\n" );
-        return;
-    }
-
-    fclose( maze_file );
-    destruct_map( &map );
-
-    printf( "Valid\n" );
-}
-
-bool help_in_args( int argc, char *argv[] ) {
-    for ( int i = 0; i < argc; i++ ) {
-        if ( strcmp( argv[ i ], "--help" ) == 0 ) {
-            return true;
-        }
-    }
-    return false;
-}
+bool has_help_flag( int argc, char *argv[] );
 
 int main( int argc, char *argv[] ) {
-    if ( argc == 1 ) {
-        printf( HELP_TEXT );
-        return 0;
-    } else if ( help_in_args( argc, argv ) ) {
+    bool show_help = ( argc == 1 ) || has_help_flag( argc, argv );
+    if ( show_help ) {
         printf( HELP_TEXT );
         return 0;
     }
@@ -109,4 +82,33 @@ int main( int argc, char *argv[] ) {
 
     fprintf( stderr, INVALID_ARGS_AMOUNT_ERROR );
     return 1;
+}
+
+void test_maze( char *filename ) {
+    FILE *maze_file = fopen( filename, "r" );
+    if ( maze_file == NULL ) {
+        printf( "Invalid\n" );
+        return;
+    }
+
+    Map map;
+    int r = construct_map( &map, maze_file );
+    if ( r != 0 ) {
+        printf( "Invalid\n" );
+        return;
+    }
+
+    fclose( maze_file );
+    destruct_map( &map );
+
+    printf( "Valid\n" );
+}
+
+bool has_help_flag( int argc, char *argv[] ) {
+    for ( int i = 0; i < argc; i++ ) {
+        if ( strcmp( argv[ i ], "--help" ) == 0 ) {
+            return true;
+        }
+    }
+    return false;
 }
