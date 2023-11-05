@@ -15,7 +15,6 @@
 #endif
 
 typedef enum processCharResult { OK, BAD_MAP, BAD_CELL } ProcessCharResult;
-typedef enum border { RIGHT, LEFT, UPDOWN } Border;
 
 int load_map_size( Map *map, FILE *file ) {
     int rows;
@@ -191,16 +190,15 @@ int construct_map( Map *map, FILE *file ) {
 void destruct_map( Map *map ) { free( map->cells ); }
 
 bool isborder( Map *map, int r, int c, Border border ) {
+    int cell = get_cell( map, r, c );
     if ( border == RIGHT ) {
-        return has_right_border( get_cell( map, r, c ) );
+        return has_right_border( cell );
     } else if ( border == LEFT ) {
-        return has_left_border( get_cell( map, r, c ) );
-    } else if ( border == UPDOWN ) {
-        return has_updown_border( get_cell( map, r, c ) );
+        return has_left_border( cell );
+    } else if ( border == UP || border == DOWN ) {
+        return has_updown_border( cell );
     }
 
     loginfo( "invalid border value `%i`", border );
     return false;
 }
-
-void solve_maze( Map *map, int start_row, int start_column, Strategy strategy );
