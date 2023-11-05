@@ -7,7 +7,22 @@
 
 typedef enum strategy { RIGHT_HAND, LEFT_HAND, SHORTEST } Strategy;
 
-// Do not change
+/* ## Represents a map of the maze.
+
+cells - each char of the cells accessor vector represents
+        a cell with 3 passages in the maze.
+
+Third rightmost bit (0b100) - border on the left
+Second rightmost bit (0b010) - border on the right
+Rightmost bit (0b001) - border above or below. It depends on the sum of the
+coordinates:
+    - odd: passage is above
+    - even: passage is below
+
+0 specifies the absence of the border on the side, and 1 its presence.
+
+This structure is the part of the project requirements. Do not change.
+*/
 typedef struct map {
     int rows;
     int cols;
