@@ -196,23 +196,20 @@ class TestMazeTesting:
 
 
 class TestRun:
-    @pytest.mark.skip()
     def test_run_right_path(self):
-        result = run_program("--rpath tests/mazes/valid_maze.txt")
+        result = run_program("--rpath 1 1 tests/mazes/valid_maze.txt")
 
-        assert result.code == 0
-        assert False
+        assert result.code == 1
+        assert result.stderr == "--rpath is not implemented\n"
 
-    @pytest.mark.skip()
     def test_run_left_path(self):
-        result = run_program("--lpath tests/mazes/valid_maze.txt")
+        result = run_program("--lpath 1 1 tests/mazes/valid_maze.txt")
 
-        assert result.code == 0
-        assert False
+        assert result.code == 1
+        assert result.stderr == "--lpath is not implemented\n"
 
-    @pytest.mark.skip()
     def test_run_shortest(self):
-        result = run_program("--shortest tests/mazes/valid_maze.txt")
+        result = run_program("--shortest 1 1 tests/mazes/valid_maze.txt")
 
-        assert result.code == 0
-        assert False
+        assert result.code == 1
+        assert result.stderr == "--shortest is not implemented\n"

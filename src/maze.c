@@ -5,7 +5,10 @@
 
 #include "map.h"
 
-#define UNINITIALIZED = -1
+typedef struct position {
+    int row;
+    int column;
+} Position;
 
 static const char HELP_TEXT[] = ""
                                 "Usage: ./maze [option] file...\n"
@@ -22,9 +25,11 @@ static const char INVALID_ARGS_AMOUNT_ERROR[] =
 static const char UNKNOWN_STRATEGY_ERROR[] =
     "Unknown strategy `%s`. Try `maze --help` for more information.\n";
 
+bool has_help_flag( int argc, char *argv[] );
+
 void test_maze( char *filename );
 
-bool has_help_flag( int argc, char *argv[] );
+int get_starting_position( char *row, char *column, Position *position );
 
 int main( int argc, char *argv[] ) {
     bool show_help = ( argc == 1 ) || has_help_flag( argc, argv );
@@ -37,8 +42,8 @@ int main( int argc, char *argv[] ) {
         char *flag = argv[ 1 ];
         char *maze_filename = argv[ 2 ];
 
-        bool has_test_flag = strcmp( flag, "--test" ) == 0;
-        if ( !has_test_flag ) {
+        bool has_test_option = strcmp( flag, "--test" ) == 0;
+        if ( !has_test_option ) {
             fprintf( stderr, INVALID_ARGS_ERROR, flag );
             return 1;
         }
@@ -47,43 +52,42 @@ int main( int argc, char *argv[] ) {
         return 0;
 
     } else if ( argc == 5 ) {
-        char *flag = argv[ 1 ];
+        char *solving_strategy = argv[ 1 ];
 
-        char *row_ptr;
-        // int start_row = strtol( argv[ 2 ], &row_ptr, 10 );
-        strtol( argv[ 2 ], &row_ptr, 10 );
-        if ( *row_ptr != '\0' ) {
-            fprintf( stderr, INVALID_ARGS_ERROR, argv[ 2 ] );
-            return 1;
-        }
-
-        char *column_ptr;
-        // int start_column = strtol( argv[ 3 ], &column_ptr, 10 );
-        strtol( argv[ 3 ], &column_ptr, 10 );
-        if ( *column_ptr != '\0' ) {
-            fprintf( stderr, INVALID_ARGS_ERROR, argv[ 3 ] );
+        Position start_at;
+        int r = get_starting_position( argv[ 2 ], argv[ 3 ], &start_at );
+        if ( r != 0 ) {
             return 1;
         }
 
         // char *maze_filename = argv[ 4 ];
 
-        if ( strcmp( flag, "--rpath" ) == 0 ) {
+        if ( strcmp( solving_strategy, "--rpath" ) == 0 ) {
             fprintf( stderr, "--rpath is not implemented\n" );
             return 1;
-        } else if ( strcmp( flag, "--lpath" ) == 0 ) {
+        } else if ( strcmp( solving_strategy, "--lpath" ) == 0 ) {
             fprintf( stderr, "--lpath is not implemented\n" );
             return 1;
-        } else if ( strcmp( flag, "--shortest" ) == 0 ) {
+        } else if ( strcmp( solving_strategy, "--shortest" ) == 0 ) {
             fprintf( stderr, "--shortest is not implemented\n" );
             return 1;
         } else {
-            fprintf( stderr, UNKNOWN_STRATEGY_ERROR, flag );
+            fprintf( stderr, UNKNOWN_STRATEGY_ERROR, solving_strategy );
             return 1;
         }
     }
 
     fprintf( stderr, INVALID_ARGS_AMOUNT_ERROR );
     return 1;
+}
+
+bool has_help_flag( int argc, char *argv[] ) {
+    for ( int i = 0; i < argc; i++ ) {
+        if ( strcmp( argv[ i ], "--help" ) == 0 ) {
+            return true;
+        }
+    }
+    return false;
 }
 
 void test_maze( char *filename ) {
@@ -106,11 +110,22 @@ void test_maze( char *filename ) {
     printf( "Valid\n" );
 }
 
-bool has_help_flag( int argc, char *argv[] ) {
-    for ( int i = 0; i < argc; i++ ) {
-        if ( strcmp( argv[ i ], "--help" ) == 0 ) {
-            return true;
-        }
+int get_starting_position( char *row, char *column, Position *position ) {
+    char *row_ptr;
+    int start_row = strtol( row, &row_ptr, 10 );
+    if ( *row_ptr != '\0' ) {
+        fprintf( stderr, INVALID_ARGS_ERROR, row );
+        return 1;
     }
-    return false;
+
+    char *column_ptr;
+    int start_column = strtol( column, &column_ptr, 10 );
+    if ( *column_ptr != '\0' ) {
+        fprintf( stderr, INVALID_ARGS_ERROR, column );
+        return 1;
+    }
+
+    position->row = start_row;
+    position->column = start_column;
+    return 0;
 }
