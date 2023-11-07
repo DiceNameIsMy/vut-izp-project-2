@@ -187,7 +187,7 @@ Map *allocate_map() {
     return map;
 }
 
-Map *construct_map( FILE *file ) {
+Map *load_map( FILE *file ) {
     Map *map = allocate_map();
     if ( map == NULL ) {
         return NULL;

@@ -37,7 +37,7 @@ typedef struct mazeStep {
     struct MazeStep *nextStep;
 } MazeStep;
 
-Map *construct_map( FILE *file );
+Map *load_map( FILE *file );
 
 void destruct_map( Map *map );
 

@@ -97,7 +97,7 @@ void test_maze( char *filename ) {
         return;
     }
 
-    Map *map = construct_map( maze_file );
+    Map *map = load_map( maze_file );
     fclose( maze_file );
 
     if ( map == NULL ) {
