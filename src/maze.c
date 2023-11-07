@@ -97,17 +97,15 @@ void test_maze( char *filename ) {
         return;
     }
 
-    Map map;
-    int r = construct_map( &map, maze_file );
-    if ( r != 0 ) {
+    Map *map = construct_map( maze_file );
+    fclose( maze_file );
+
+    if ( map == NULL ) {
         printf( "Invalid\n" );
         return;
     }
-
-    fclose( maze_file );
-    destruct_map( &map );
-
     printf( "Valid\n" );
+    destruct_map( map );
 }
 
 int get_starting_position( char *row, char *column, Position *position ) {

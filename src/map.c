@@ -172,22 +172,36 @@ bool check_map_valid( Map *map ) {
     return true;
 }
 
-int construct_map( Map *map, FILE *file ) {
-    if ( load_map_size( map, file ) != 0 )
-        return 1;
+Map *construct_map( FILE *file ) {
+    Map *map = malloc( sizeof( Map ) );
+    if ( map == NULL ) {
+        return NULL;
+    }
+
+    if ( load_map_size( map, file ) != 0 ) {
+        free( map );
+        return NULL;
+    }
 
     map->cells = malloc( map->rows * map->cols );
 
-    if ( load_map_cells( map, file ) != 0 )
-        return 1;
+    if ( load_map_cells( map, file ) != 0 ) {
+        destruct_map( map );
+        return NULL;
+    }
 
-    if ( !check_map_valid( map ) )
-        return 1;
+    if ( !check_map_valid( map ) ) {
+        destruct_map( map );
+        return NULL;
+    }
 
-    return 0;
+    return map;
 }
 
-void destruct_map( Map *map ) { free( map->cells ); }
+void destruct_map( Map *map ) {
+    free( map->cells );
+    free( map );
+}
 
 bool ( *border_solver[ 4 ] )( int cell ) = {
     has_left_border,
