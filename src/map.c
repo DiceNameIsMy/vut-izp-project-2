@@ -172,18 +172,31 @@ bool check_map_valid( Map *map ) {
     return true;
 }
 
-Map *construct_map( FILE *file ) {
+Map *allocate_map() {
     Map *map = malloc( sizeof( Map ) );
+    if ( map == NULL )
+        return NULL;
+
+    map->rows = 0;
+    map->cols = 0;
+
+    map->cells = malloc( map->rows * map->cols );
+    if ( map->cells == NULL )
+        return NULL;
+
+    return map;
+}
+
+Map *construct_map( FILE *file ) {
+    Map *map = allocate_map();
     if ( map == NULL ) {
         return NULL;
     }
 
     if ( load_map_size( map, file ) != 0 ) {
-        free( map );
+        destruct_map( map );
         return NULL;
     }
-
-    map->cells = malloc( map->rows * map->cols );
 
     if ( load_map_cells( map, file ) != 0 ) {
         destruct_map( map );
