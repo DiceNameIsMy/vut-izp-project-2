@@ -187,6 +187,11 @@ Map *allocate_map() {
     return map;
 }
 
+void destruct_map( Map *map ) {
+    free( map->cells );
+    free( map );
+}
+
 Map *load_map( FILE *file ) {
     Map *map = allocate_map();
     if ( map == NULL ) {
@@ -211,12 +216,7 @@ Map *load_map( FILE *file ) {
     return map;
 }
 
-void destruct_map( Map *map ) {
-    free( map->cells );
-    free( map );
-}
-
-bool ( *border_solver[ 4 ] )( int ) = {
+bool ( *border_solvers[ 4 ] )( int ) = {
     has_left_border,
     has_right_border,
     has_updown_border,
@@ -225,5 +225,114 @@ bool ( *border_solver[ 4 ] )( int ) = {
 
 bool isborder( Map *map, int r, int c, Border border ) {
     int cell = get_cell( map, r, c );
-    return ( *border_solver[ border ] )( cell );
+    return ( *border_solvers[ border ] )( cell );
+}
+
+bool out_of_bounds( Map *m, int r, int c ) {
+    return ( r < 1 || r > m->rows || c < 1 || c > m->cols );
+}
+
+int move_map[ BORDER_COUNT ][ 2 ] = {
+    { 0, 1 },
+    { 0, -1 },
+    { -1, 0 },
+    { 1, 0 },
+};
+
+bool moves_out_of_bounds( Map *m, int r, int c, Border direction ) {
+    int moved_r = r + move_map[ direction ][ 0 ];
+    int moved_c = c + move_map[ direction ][ 1 ];
+    return out_of_bounds( m, moved_r, moved_c );
+}
+
+typedef struct entrance {
+    bool from_left;
+    bool from_right;
+    bool from_up;
+    bool from_down;
+    bool has_passage_above;
+} Entrance;
+
+Entrance get_entrance_spec( Map *map, int r, int c ) {
+    Entrance e = { .from_left = c == 1,
+                   .from_right = c == map->cols,
+                   .from_up = r == 1,
+                   .from_down = r == map->rows,
+                   .has_passage_above = ( ( ( r + c ) & 1 ) == 0 ) };
+
+    loginfo( "entrace: L:%i R:%i U:%i D:%i Passage above:%i", e.from_left,
+             e.from_right, e.from_up, e.from_down, e.has_passage_above );
+
+    return e;
+}
+
+Border rhand_start_border( Map *map, int r, int c ) {
+    Entrance e = get_entrance_spec( map, r, c );
+
+    if ( e.from_left ) {
+        if ( !e.has_passage_above ) {
+            return DOWN;
+        }
+        return RIGHT;
+    } else if ( e.from_right ) {
+        if ( e.has_passage_above ) {
+            return UP;
+        }
+        return LEFT;
+    }
+
+    if ( e.from_up ) {
+        return LEFT;
+    } else if ( e.from_down ) {
+        return RIGHT;
+    }
+
+    return -1;
+}
+
+Border lhand_start_border( Map *map, int r, int c ) {
+    Entrance e = get_entrance_spec( map, r, c );
+
+    if ( e.from_left ) {
+        if ( e.has_passage_above ) {
+            return UP;
+        }
+        return RIGHT;
+    } else if ( e.from_right ) {
+        if ( !e.has_passage_above ) {
+            return DOWN;
+        }
+        return LEFT;
+    }
+
+    if ( e.from_up ) {
+        return RIGHT;
+    } else if ( e.from_down ) {
+        return LEFT;
+    }
+
+    return -1;
+}
+
+Border ( *start_border_solver[ 2 ] )( Map *, int, int ) = {
+    rhand_start_border,
+    lhand_start_border,
+};
+
+Border start_border( Map *map, int r, int c, int leftright ) {
+    Border border;
+    if ( leftright == 0 ) {
+        border = start_border_solver[ 0 ]( map, r, c );
+    } else if ( leftright == 1 ) {
+        border = start_border_solver[ 1 ]( map, r, c );
+    } else {
+        loginfo( "invalid leftright value %i", leftright );
+        return -1;
+    }
+
+    if ( (int)border == -1 ) {
+        loginfo( "invalid starting point %ix%i", r, c );
+    }
+
+    return border;
 }
