@@ -14,6 +14,12 @@
 #define loginfo( s, ... )
 #endif
 
+/*
+
+MAP INITIALIZATION & DESTRUCTION
+
+*/
+
 int load_map_size( Map *map, FILE *file ) {
     int rows;
     int columns;
@@ -216,17 +222,18 @@ Map *load_map( FILE *file ) {
     return map;
 }
 
+/*
+
+STARTING POINT RESOLVEMENT
+
+*/
+
 bool ( *border_solvers[ 4 ] )( int ) = {
     has_left_border,
     has_right_border,
     has_updown_border,
     has_updown_border,
 };
-
-bool isborder( Map *map, int r, int c, Border border ) {
-    int cell = get_cell( map, r, c );
-    return ( *border_solvers[ border ] )( cell );
-}
 
 bool out_of_bounds( Map *m, int r, int c ) {
     return ( r < 1 || r > m->rows || c < 1 || c > m->cols );
@@ -335,4 +342,15 @@ Border start_border( Map *map, int r, int c, int leftright ) {
     }
 
     return border;
+}
+
+/*
+
+NOT GROUPED YET
+
+*/
+
+bool isborder( Map *map, int r, int c, Border border ) {
+    int cell = get_cell( map, r, c );
+    return ( *border_solvers[ border ] )( cell );
 }
