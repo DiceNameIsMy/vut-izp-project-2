@@ -14,8 +14,6 @@
 #define loginfo( s, ... )
 #endif
 
-typedef enum processCharResult { OK, BAD_MAP, BAD_CELL } ProcessCharResult;
-
 int load_map_size( Map *map, FILE *file ) {
     int rows;
     int columns;
@@ -40,6 +38,8 @@ int to_cell( char c ) {
 
     return c - '0';
 }
+
+typedef enum processCharResult { OK, BAD_MAP, BAD_CELL } ProcessCharResult;
 
 ProcessCharResult process_char( Map *map, char c, int *row_ptr, int *col_ptr ) {
     int row = *row_ptr;
@@ -216,7 +216,7 @@ void destruct_map( Map *map ) {
     free( map );
 }
 
-bool ( *border_solver[ 4 ] )( int cell ) = {
+bool ( *border_solver[ 4 ] )( int ) = {
     has_left_border,
     has_right_border,
     has_updown_border,
