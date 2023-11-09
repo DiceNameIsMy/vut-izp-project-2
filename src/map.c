@@ -232,82 +232,28 @@ bool out_of_bounds( Map *m, int r, int c ) {
     return ( r < 1 || r > m->rows || c < 1 || c > m->cols );
 }
 
-int move_incr[ BORDER_COUNT ][ 2 ] = {
-    [RIGHT] = { 0, 1 },
-    [LEFT] = { 0, -1 },
-    [UP] = { -1, 0 },
-    [DOWN] = { 1, 0 },
-};
+Border next_step_ruleset[ 2 ][ BORDER_COUNT ][ 2 ] = {
+    [RIGHT_HAND] = { [LEFT] = { DOWN, RIGHT },
+                     [RIGHT] = { LEFT, UP },
+                     [UP] = { LEFT, LEFT },
+                     [DOWN] = { RIGHT, RIGHT } },
+    [LEFT_HAND] = { [LEFT] = { RIGHT, UP },
+                    [RIGHT] = { DOWN, LEFT },
+                    [UP] = { RIGHT, RIGHT },
+                    [DOWN] = { LEFT, LEFT } } };
 
-typedef struct entrance {
-    bool from_left;
-    bool from_right;
-    bool from_up;
-    bool from_down;
-    bool has_passage_above;
-} Entrance;
-
-Entrance entrance_ctor( Map *map, int r, int c ) {
-    Entrance e = { .from_left = c == 1,
-                   .from_right = c == map->cols,
-                   .from_up = r == 1,
-                   .from_down = r == map->rows,
-                   .has_passage_above = ( ( ( r + c ) & 1 ) == 0 ) };
-
-    loginfo( "entrace: L:%i R:%i U:%i D:%i Passage above:%i", e.from_left,
-             e.from_right, e.from_up, e.from_down, e.has_passage_above );
-
-    return e;
-}
-
-Border rhand_next_border( Border came_from, bool can_go_up ) {
-    if ( came_from == LEFT ) {
-        if ( !can_go_up ) {
-            return DOWN;
-        }
-        return RIGHT;
-    } else if ( came_from == RIGHT ) {
-        if ( can_go_up ) {
-            return UP;
-        }
+Border resolve_came_from( Map *map, int r, int c ) {
+    if ( c == 1 )
         return LEFT;
-    }
-
-    if ( came_from == UP ) {
-        return LEFT;
-    } else if ( came_from == DOWN ) {
+    else if ( c == map->cols )
         return RIGHT;
-    }
+    else if ( r == 1 )
+        return UP;
+    else if ( r == map->rows )
+        return DOWN;
 
     return -1;
 }
-
-Border lhand_next_border( Border came_from, bool can_go_up ) {
-    if ( came_from == LEFT ) {
-        if ( can_go_up ) {
-            return UP;
-        }
-        return RIGHT;
-    } else if ( came_from == RIGHT ) {
-        if ( !can_go_up ) {
-            return DOWN;
-        }
-        return LEFT;
-    }
-
-    if ( came_from == UP ) {
-        return RIGHT;
-    } else if ( came_from == DOWN ) {
-        return LEFT;
-    }
-
-    return -1;
-}
-
-Border ( *get_next_step_func[ 3 ] )( Border came_from, bool can_go_up ) = {
-    [RIGHT_HAND] = rhand_next_border,
-    [LEFT_HAND] = lhand_next_border,
-};
 
 Border start_border( Map *map, int r, int c, int leftright ) {
     if ( leftright == SHORTEST ) {
@@ -315,36 +261,49 @@ Border start_border( Map *map, int r, int c, int leftright ) {
         return -1;
     }
 
-    Border came_from = -1;
-    if ( c == 1 )
-        came_from = LEFT;
-    else if ( c == map->cols )
-        came_from = RIGHT;
-    else if ( r == 1 )
-        came_from = UP;
-    else if ( r == map->rows )
-        came_from = DOWN;
-    else {
+    Border came_from = resolve_came_from( map, r, c );
+    if ( (int)came_from == -1 ) {
         loginfo( "not entering the maze from borders (%ix%i)", r, c );
         return -1;
     }
 
     bool can_go_up = ( ( ( r + c ) & 1 ) == 0 );
 
-    Border border = get_next_step_func[ leftright ]( came_from, can_go_up );
-    if ( (int)border == -1 ) {
-        loginfo( "invalid starting point %ix%i", r, c );
-        return -1;
-    }
-
-    return border;
+    return next_step_ruleset[ leftright ][ came_from ][ can_go_up ];
 }
+
+// void take_step( Map *m, int *r, int *c, Border *from ) {}
+
+// void solve_maze( Map *map, int r, int c, Strategy strategy ) {
+//     if ( strategy == SHORTEST ) {
+//         loginfo( "not implemented strategy: %i", strategy );
+//         return;
+//     }
+
+//     Border from = start_border( map, r, c, strategy );
+
+//     while ( true ) {
+//         if ( out_of_bounds( map, r, c ) ) {
+//             return;
+//         }
+//         printf( "%i, %i\n", r, c );
+
+//         take_step( map, &r, &c, &from );
+//     }
+// }
 
 /*
 
 NOT GROUPED YET
 
 */
+
+int move_incr[ BORDER_COUNT ][ 2 ] = {
+    [RIGHT] = { 0, 1 },
+    [LEFT] = { 0, -1 },
+    [UP] = { -1, 0 },
+    [DOWN] = { 1, 0 },
+};
 
 bool moves_out_of_bounds( Map *m, int r, int c, Border direction ) {
     int moved_r = r + move_incr[ direction ][ 0 ];
