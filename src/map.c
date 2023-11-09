@@ -166,11 +166,13 @@ bool check_cell_valid( Map *map, int r, int c ) {
     return true;
 }
 
+/* check vailidy of every cell's right & down border starting from top left
+ */
 bool is_map_valid( Map *map ) {
-    for ( int row_idx = 1; row_idx <= map->rows; row_idx++ ) {
-        for ( int col_idx = 1; col_idx <= map->cols; col_idx++ ) {
-            if ( !check_cell_valid( map, row_idx, col_idx ) ) {
-                loginfo( "map cell %ix%i is invalid", row_idx, col_idx );
+    for ( int r = 1; r <= map->rows; r++ ) {
+        for ( int c = 1; c <= map->cols; c++ ) {
+            if ( !check_cell_valid( map, r, c ) ) {
+                loginfo( "map cell %ix%i is invalid", r, c );
                 return false;
             }
         }
@@ -232,6 +234,11 @@ bool out_of_bounds( Map *m, int r, int c ) {
     return ( r < 1 || r > m->rows || c < 1 || c > m->cols );
 }
 
+/* Resolve to what passage to look at next
+- first accessor is a strategy: LEFT_HAND / RIGHT_HAND
+- second accessor: Border where from player came
+- third accessor: Whether player's current cell has a passage UP
+ */
 Border next_step_ruleset[ 2 ][ BORDER_COUNT ][ 2 ] = {
     [RIGHT_HAND] = { [LEFT] = { DOWN, RIGHT },
                      [RIGHT] = { LEFT, UP },
