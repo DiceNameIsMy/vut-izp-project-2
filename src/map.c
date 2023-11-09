@@ -20,7 +20,7 @@ MAP INITIALIZATION & DESTRUCTION
 
 */
 
-int load_map_size( Map *map, FILE *file ) {
+int read_map_size( Map *map, FILE *file ) {
     int rows;
     int columns;
 
@@ -80,7 +80,7 @@ ProcessCharResult process_char( Map *map, char c, int *row_ptr, int *col_ptr ) {
     return OK;
 }
 
-int load_map_cells( Map *map, FILE *file ) {
+int read_map_cells( Map *map, FILE *file ) {
     int row = 1;
     int column = 1;
 
@@ -166,7 +166,7 @@ bool check_cell_valid( Map *map, int r, int c ) {
     return true;
 }
 
-bool check_map_valid( Map *map ) {
+bool is_map_valid( Map *map ) {
     for ( int row_idx = 1; row_idx <= map->rows; row_idx++ ) {
         for ( int col_idx = 1; col_idx <= map->cols; col_idx++ ) {
             if ( !check_cell_valid( map, row_idx, col_idx ) ) {
@@ -204,17 +204,17 @@ Map *load_map( FILE *file ) {
         return NULL;
     }
 
-    if ( load_map_size( map, file ) != 0 ) {
+    if ( read_map_size( map, file ) != 0 ) {
         destruct_map( map );
         return NULL;
     }
 
-    if ( load_map_cells( map, file ) != 0 ) {
+    if ( read_map_cells( map, file ) != 0 ) {
         destruct_map( map );
         return NULL;
     }
 
-    if ( !check_map_valid( map ) ) {
+    if ( !is_map_valid( map ) ) {
         destruct_map( map );
         return NULL;
     }
@@ -228,29 +228,16 @@ STARTING POINT RESOLVEMENT
 
 */
 
-bool ( *border_solvers[ 4 ] )( int ) = {
-    has_left_border,
-    has_right_border,
-    has_updown_border,
-    has_updown_border,
-};
-
 bool out_of_bounds( Map *m, int r, int c ) {
     return ( r < 1 || r > m->rows || c < 1 || c > m->cols );
 }
 
-int move_map[ BORDER_COUNT ][ 2 ] = {
-    { 0, 1 },
-    { 0, -1 },
-    { -1, 0 },
-    { 1, 0 },
+int move_incr[ BORDER_COUNT ][ 2 ] = {
+    [RIGHT] = { 0, 1 },
+    [LEFT] = { 0, -1 },
+    [UP] = { -1, 0 },
+    [DOWN] = { 1, 0 },
 };
-
-bool moves_out_of_bounds( Map *m, int r, int c, Border direction ) {
-    int moved_r = r + move_map[ direction ][ 0 ];
-    int moved_c = c + move_map[ direction ][ 1 ];
-    return out_of_bounds( m, moved_r, moved_c );
-}
 
 typedef struct entrance {
     bool from_left;
@@ -260,7 +247,7 @@ typedef struct entrance {
     bool has_passage_above;
 } Entrance;
 
-Entrance get_entrance_spec( Map *map, int r, int c ) {
+Entrance entrance_ctor( Map *map, int r, int c ) {
     Entrance e = { .from_left = c == 1,
                    .from_right = c == map->cols,
                    .from_up = r == 1,
@@ -274,7 +261,7 @@ Entrance get_entrance_spec( Map *map, int r, int c ) {
 }
 
 Border rhand_start_border( Map *map, int r, int c ) {
-    Entrance e = get_entrance_spec( map, r, c );
+    Entrance e = entrance_ctor( map, r, c );
 
     if ( e.from_left ) {
         if ( !e.has_passage_above ) {
@@ -298,7 +285,7 @@ Border rhand_start_border( Map *map, int r, int c ) {
 }
 
 Border lhand_start_border( Map *map, int r, int c ) {
-    Entrance e = get_entrance_spec( map, r, c );
+    Entrance e = entrance_ctor( map, r, c );
 
     if ( e.from_left ) {
         if ( e.has_passage_above ) {
@@ -321,22 +308,18 @@ Border lhand_start_border( Map *map, int r, int c ) {
     return -1;
 }
 
-Border ( *start_border_solver[ 2 ] )( Map *, int, int ) = {
-    rhand_start_border,
-    lhand_start_border,
+Border ( *start_border_func[ 3 ] )( Map *, int, int ) = {
+    [RIGHT_HAND] = rhand_start_border,
+    [LEFT_HAND] = lhand_start_border,
 };
 
 Border start_border( Map *map, int r, int c, int leftright ) {
-    Border border;
-    if ( leftright == 0 ) {
-        border = start_border_solver[ 0 ]( map, r, c );
-    } else if ( leftright == 1 ) {
-        border = start_border_solver[ 1 ]( map, r, c );
-    } else {
+    if ( leftright == SHORTEST ) {
         loginfo( "invalid leftright value %i", leftright );
         return -1;
     }
 
+    Border border = start_border_func[ leftright ]( map, r, c );
     if ( (int)border == -1 ) {
         loginfo( "invalid starting point %ix%i", r, c );
     }
@@ -350,7 +333,20 @@ NOT GROUPED YET
 
 */
 
+bool moves_out_of_bounds( Map *m, int r, int c, Border direction ) {
+    int moved_r = r + move_incr[ direction ][ 0 ];
+    int moved_c = c + move_incr[ direction ][ 1 ];
+    return out_of_bounds( m, moved_r, moved_c );
+}
+
+bool ( *solve_border_func[ 4 ] )( int ) = {
+    has_left_border,
+    has_right_border,
+    has_updown_border,
+    has_updown_border,
+};
+
 bool isborder( Map *map, int r, int c, Border border ) {
     int cell = get_cell( map, r, c );
-    return ( *border_solvers[ border ] )( cell );
+    return ( *solve_border_func[ border ] )( cell );
 }
