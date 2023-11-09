@@ -29,17 +29,11 @@ typedef struct map {
     unsigned char *cells;
 } Map;
 
-typedef enum border { RIGHT, LEFT, UP, DOWN, BORDER_COUNT } Border;
-
-typedef struct mazeStep {
-    int8_t row;
-    int8_t column;
-    struct MazeStep *nextStep;
-} MazeStep;
-
 Map *load_map( FILE *file );
 
 void destruct_map( Map *map );
+
+typedef enum border { RIGHT, LEFT, UP, DOWN, BORDER_COUNT } Border;
 
 // Do not change
 bool isborder( Map *map, int r, int c, Border border );
@@ -50,7 +44,6 @@ Do not change
 */
 Border start_border( Map *map, int r, int c, int leftright );
 
-MazeStep *solve_maze( Map *map, int start_row, int start_column,
-                      Strategy strategy );
+void solve_maze( Map *map, int r, int c, Strategy strategy );
 
 #endif
