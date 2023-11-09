@@ -20,8 +20,6 @@ int main() {
         return 1;
     }
 
-    Border b;
-
     run_case( m, 1, 1, RIGHT_HAND, RIGHT );
     run_case( m, 2, 1, RIGHT_HAND, DOWN );
     run_case( m, 3, 1, RIGHT_HAND, RIGHT );
