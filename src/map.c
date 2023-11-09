@@ -260,57 +260,53 @@ Entrance entrance_ctor( Map *map, int r, int c ) {
     return e;
 }
 
-Border rhand_start_border( Map *map, int r, int c ) {
-    Entrance e = entrance_ctor( map, r, c );
-
-    if ( e.from_left ) {
-        if ( !e.has_passage_above ) {
+Border rhand_next_border( Border came_from, bool can_go_up ) {
+    if ( came_from == LEFT ) {
+        if ( !can_go_up ) {
             return DOWN;
         }
         return RIGHT;
-    } else if ( e.from_right ) {
-        if ( e.has_passage_above ) {
+    } else if ( came_from == RIGHT ) {
+        if ( can_go_up ) {
             return UP;
         }
         return LEFT;
     }
 
-    if ( e.from_up ) {
+    if ( came_from == UP ) {
         return LEFT;
-    } else if ( e.from_down ) {
+    } else if ( came_from == DOWN ) {
         return RIGHT;
     }
 
     return -1;
 }
 
-Border lhand_start_border( Map *map, int r, int c ) {
-    Entrance e = entrance_ctor( map, r, c );
-
-    if ( e.from_left ) {
-        if ( e.has_passage_above ) {
+Border lhand_next_border( Border came_from, bool can_go_up ) {
+    if ( came_from == LEFT ) {
+        if ( can_go_up ) {
             return UP;
         }
         return RIGHT;
-    } else if ( e.from_right ) {
-        if ( !e.has_passage_above ) {
+    } else if ( came_from == RIGHT ) {
+        if ( !can_go_up ) {
             return DOWN;
         }
         return LEFT;
     }
 
-    if ( e.from_up ) {
+    if ( came_from == UP ) {
         return RIGHT;
-    } else if ( e.from_down ) {
+    } else if ( came_from == DOWN ) {
         return LEFT;
     }
 
     return -1;
 }
 
-Border ( *start_border_func[ 3 ] )( Map *, int, int ) = {
-    [RIGHT_HAND] = rhand_start_border,
-    [LEFT_HAND] = lhand_start_border,
+Border ( *get_next_step_func[ 3 ] )( Border came_from, bool can_go_up ) = {
+    [RIGHT_HAND] = rhand_next_border,
+    [LEFT_HAND] = lhand_next_border,
 };
 
 Border start_border( Map *map, int r, int c, int leftright ) {
@@ -319,9 +315,26 @@ Border start_border( Map *map, int r, int c, int leftright ) {
         return -1;
     }
 
-    Border border = start_border_func[ leftright ]( map, r, c );
+    Border came_from = -1;
+    if ( c == 1 )
+        came_from = LEFT;
+    else if ( c == map->cols )
+        came_from = RIGHT;
+    else if ( r == 1 )
+        came_from = UP;
+    else if ( r == map->rows )
+        came_from = DOWN;
+    else {
+        loginfo( "not entering the maze from borders (%ix%i)", r, c );
+        return -1;
+    }
+
+    bool can_go_up = ( ( ( r + c ) & 1 ) == 0 );
+
+    Border border = get_next_step_func[ leftright ]( came_from, can_go_up );
     if ( (int)border == -1 ) {
         loginfo( "invalid starting point %ix%i", r, c );
+        return -1;
     }
 
     return border;
