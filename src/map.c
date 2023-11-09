@@ -128,9 +128,11 @@ bool check_right_border( Map *map, int cell, int r, int c ) {
     return true;
 }
 
+bool has_passage_above( int r, int c ) { return ( ( ( r + c ) & 1 ) == 0 ); }
+
 bool check_down_border( Map *map, int cell, int r, int c ) {
-    bool cell_goes_down = ( ( r + c ) & 0b1 ) == 1;
-    if ( !cell_goes_down )
+    bool cell_goes_up = has_passage_above( r, c );
+    if ( cell_goes_up )
         return true;
 
     bool has_down_cell = ( r + 1 ) <= map->rows;
