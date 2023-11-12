@@ -19,14 +19,16 @@ typedef struct position {
     int column;
 } Position;
 
-static const char HELP_TEXT[] = ""
-                                "Usage: ./maze [option] file...\n"
-                                "Option:\n"
-                                "  --help\n"
-                                "  --test\n"
-                                "  --rpath\n"
-                                "  --lpath\n"
-                                "  --shortest\n";
+static const char HELP_TEXT[] =
+    ""
+    "Usage: ./maze [options] file...\n"
+    "Options:\n"
+    "  --help                     Display this information.\n"
+    "  --test                     Test if given file is a valid maze.\n"
+    "  --rpath <row> <column>     Solve maze using the right hand rule.\n"
+    "  --lpath <row> <column>     Solve maze using the left hand rule.\n"
+    "  --shortest <row> <column>  Solve maze by finding the shortest path to "
+    "the exit.\n";
 static const char INVALID_ARGS_ERROR[] =
     "Invalid argument `%s`. Try `maze --help` for more information.\n";
 static const char INVALID_ARGS_AMOUNT_ERROR[] =

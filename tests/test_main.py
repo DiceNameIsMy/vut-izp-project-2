@@ -49,13 +49,13 @@ def make():
 
 
 class TestInvalidArgs:
-    HELP_TEXT = """Usage: ./maze [option] file...
-Option:
-  --help
-  --test
-  --rpath
-  --lpath
-  --shortest
+    HELP_TEXT = """Usage: ./maze [options] file...
+Options:
+  --help                     Display this information.
+  --test                     Test if given file is a valid maze.
+  --rpath <row> <column>     Solve maze using the right hand rule.
+  --lpath <row> <column>     Solve maze using the left hand rule.
+  --shortest <row> <column>  Solve maze by finding the shortest path to the exit.
 """
     INVALID_ARGS_MESSAGE = (
         "Invalid argument `{}`. Try `maze --help` for more information.\n"
