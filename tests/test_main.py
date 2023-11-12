@@ -115,6 +115,8 @@ Option:
 
 
 class TestMazeTesting:
+    FILE_NOT_READABLE_MESSAGE = "Failed to read file.\n"
+
     def test_valid(self):
         result = run_program("--test tests/mazes/valid_maze.txt")
 
@@ -148,7 +150,7 @@ class TestMazeTesting:
 
         assert result.code == 1
         assert result.stdout == ""
-        assert result.debugless_stderr() == "Failed to read file.\n"
+        assert result.debugless_stderr() == self.FILE_NOT_READABLE_MESSAGE
 
     def test_zero_sized_maze(self):
         result = run_program("--test tests/mazes/zero_maze.txt")
@@ -190,7 +192,7 @@ class TestMazeTesting:
 
         assert result.code == 1
         assert result.stdout == ""
-        assert result.debugless_stderr() == "Failed to read file.\n"
+        assert result.debugless_stderr() == self.FILE_NOT_READABLE_MESSAGE
 
 
 class TestRun:
