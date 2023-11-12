@@ -305,17 +305,8 @@ int move_incr[ BORDER_COUNT ][ 2 ] = {
     [DOWN] = { 1, 0 },
 };
 
-Border reverse_direction( Border b ) {
-    if ( b == LEFT )
-        return RIGHT;
-    if ( b == RIGHT )
-        return LEFT;
-    if ( b == UP )
-        return DOWN;
-    if ( b == DOWN )
-        return UP;
-    return -1;  // should be unreachable
-}
+Border reverse_direction[ BORDER_COUNT ] = {
+    [RIGHT] = LEFT, [LEFT] = RIGHT, [UP] = DOWN, [DOWN] = UP };
 
 Border take_step( Map *m, int *r, int *c, Strategy leftright,
                   Border came_from ) {
@@ -335,7 +326,7 @@ Border take_step( Map *m, int *r, int *c, Strategy leftright,
 
     loginfo( "move %s to %ix%i", border_str[ direction ], *r, *c );
 
-    return reverse_direction( direction );
+    return reverse_direction[ direction ];
 }
 
 void solve_maze( Map *map, int r, int c, Strategy strategy ) {
