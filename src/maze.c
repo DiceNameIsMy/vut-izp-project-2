@@ -82,7 +82,14 @@ int try_test_maze( char *option, char *filename ) {
         return 1;
     }
 
-    Map *map = load_maze( filename );
+    FILE *file = fopen( filename, "r" );
+    if ( file == NULL ) {
+        fprintf( stderr, "Failed to read file.\n" );
+        return 1;
+    }
+
+    Map *map = load_map( file );
+    fclose( file );
 
     if ( map == NULL ) {
         printf( "Invalid\n" );
@@ -105,23 +112,27 @@ Strategy get_strategy( char *option ) {
     return -1;
 }
 
-int get_starting_position( char *row, char *column, Position *position ) {
-    char *p_row;
-    int start_row = strtol( row, &p_row, 10 );
-    if ( *p_row != '\0' ) {
-        fprintf( stderr, INVALID_ARGS_ERROR, row );
+int parse_positive_int( char *str ) {
+    char *p_str;
+    int val = strtol( str, &p_str, 10 );
+    return *p_str == '\0' ? val : -1;
+}
+
+int set_starting_position( char *str_row, char *str_column,
+                           Position *position ) {
+    int row = parse_positive_int( str_row );
+    if ( row == -1 ) {
+        fprintf( stderr, INVALID_ARGS_ERROR, str_row );
+        return 1;
+    }
+    int column = parse_positive_int( str_column );
+    if ( column == -1 ) {
+        fprintf( stderr, INVALID_ARGS_ERROR, str_column );
         return 1;
     }
 
-    char *p_column;
-    int start_column = strtol( column, &p_column, 10 );
-    if ( *p_column != '\0' ) {
-        fprintf( stderr, INVALID_ARGS_ERROR, column );
-        return 1;
-    }
-
-    position->row = start_row;
-    position->column = start_column;
+    position->row = row;
+    position->column = column;
     return 0;
 }
 
@@ -136,12 +147,18 @@ int try_solve_maze( char *option, char *row, char *column, char *filename ) {
     }
 
     Position start_at;
-    int r = get_starting_position( row, column, &start_at );
-    if ( r != 0 ) {
+    if ( set_starting_position( row, column, &start_at ) != 0 ) {
         return 1;
     }
 
-    Map *map = load_maze( filename );
+    FILE *file = fopen( filename, "r" );
+    if ( file == NULL ) {
+        fprintf( stderr, "Failed to read file.\n" );
+        return 1;
+    }
+
+    Map *map = load_map( file );
+    fclose( file );
     if ( map == NULL ) {
         return 1;
     }

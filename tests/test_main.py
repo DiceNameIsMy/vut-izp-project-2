@@ -146,9 +146,9 @@ class TestMazeTesting:
     def test_updown_borders_mismatch(self):
         result = run_program("--test tests/mazes/updown_border_mismatch.txt")
 
-        assert result.code == 0
-        assert result.stdout == "Invalid\n"
-        assert result.debugless_stderr() == ""
+        assert result.code == 1
+        assert result.stdout == ""
+        assert result.debugless_stderr() == "Failed to read file.\n"
 
     def test_zero_sized_maze(self):
         result = run_program("--test tests/mazes/zero_maze.txt")
@@ -188,9 +188,9 @@ class TestMazeTesting:
     def test_no_file(self):
         result = run_program("--test tests/mazes/not_existing.txt")
 
-        assert result.code == 0
-        assert result.stdout == "Invalid\n"
-        assert result.debugless_stderr() == ""
+        assert result.code == 1
+        assert result.stdout == ""
+        assert result.debugless_stderr() == "Failed to read file.\n"
 
 
 class TestRun:
