@@ -29,14 +29,10 @@ bool has_help_flag( int argc, char *argv[] );
 
 int try_test_maze( char *option, char *filename );
 
-Strategy get_strategy( char *option );
-
-int get_starting_position( char *row, char *column, Position *position );
-
 int try_solve_maze( char *option, char *row, char *column, char *filename );
 
 int main( int argc, char *argv[] ) {
-    bool show_help = ( argc == 1 ) || has_help_flag( argc, argv );
+    bool show_help = has_help_flag( argc, argv ) || ( argc == 1 );
     if ( show_help ) {
         printf( HELP_TEXT );
         return 0;
@@ -48,8 +44,10 @@ int main( int argc, char *argv[] ) {
         return try_test_maze( flag, maze_filename );
     } else if ( argc == 5 ) {
         char *flag = argv[ 1 ];
+        char *row_str = argv[ 2 ];
+        char *column_str = argv[ 3 ];
         char *maze_filename = argv[ 4 ];
-        return try_solve_maze( flag, argv[ 2 ], argv[ 3 ], maze_filename );
+        return try_solve_maze( flag, row_str, column_str, maze_filename );
     }
 
     fprintf( stderr, INVALID_ARGS_AMOUNT_ERROR );
@@ -96,6 +94,37 @@ int try_test_maze( char *option, char *filename ) {
     return 0;
 }
 
+Strategy get_strategy( char *option ) {
+    if ( strcmp( option, "--rpath" ) == 0 ) {
+        return RIGHT_HAND;
+    } else if ( strcmp( option, "--lpath" ) == 0 ) {
+        return LEFT_HAND;
+    } else if ( strcmp( option, "--shortest" ) == 0 ) {
+        return SHORTEST;
+    }
+    return -1;
+}
+
+int get_starting_position( char *row, char *column, Position *position ) {
+    char *p_row;
+    int start_row = strtol( row, &p_row, 10 );
+    if ( *p_row != '\0' ) {
+        fprintf( stderr, INVALID_ARGS_ERROR, row );
+        return 1;
+    }
+
+    char *p_column;
+    int start_column = strtol( column, &p_column, 10 );
+    if ( *p_column != '\0' ) {
+        fprintf( stderr, INVALID_ARGS_ERROR, column );
+        return 1;
+    }
+
+    position->row = start_row;
+    position->column = start_column;
+    return 0;
+}
+
 int try_solve_maze( char *option, char *row, char *column, char *filename ) {
     Strategy strategy = get_strategy( option );
     if ( (int)strategy == -1 ) {
@@ -120,35 +149,4 @@ int try_solve_maze( char *option, char *row, char *column, char *filename ) {
 
     destruct_map( map );
     return 0;
-}
-
-int get_starting_position( char *row, char *column, Position *position ) {
-    char *p_row;
-    int start_row = strtol( row, &p_row, 10 );
-    if ( *p_row != '\0' ) {
-        fprintf( stderr, INVALID_ARGS_ERROR, row );
-        return 1;
-    }
-
-    char *p_column;
-    int start_column = strtol( column, &p_column, 10 );
-    if ( *p_column != '\0' ) {
-        fprintf( stderr, INVALID_ARGS_ERROR, column );
-        return 1;
-    }
-
-    position->row = start_row;
-    position->column = start_column;
-    return 0;
-}
-
-Strategy get_strategy( char *option ) {
-    if ( strcmp( option, "--rpath" ) == 0 ) {
-        return RIGHT_HAND;
-    } else if ( strcmp( option, "--lpath" ) == 0 ) {
-        return LEFT_HAND;
-    } else if ( strcmp( option, "--shortest" ) == 0 ) {
-        return SHORTEST;
-    }
-    return -1;
 }
