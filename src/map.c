@@ -9,10 +9,49 @@
 
 #ifndef NDEBUG
 #define loginfo( s, ... ) \
-    fprintf( stderr, __FILE__ ":%u: " s "\n", __LINE__, __VA_ARGS__ )
+    fprintf( stderr, "[INF]" __FILE__ ":%u: " s "\n", __LINE__, __VA_ARGS__ )
 #else
 #define loginfo( s, ... )
 #endif
+
+/*
+
+HELPER DEFINITIONS
+
+*/
+
+char *border_str[ BORDER_COUNT ] = {
+    [RIGHT] = "RIGHT",
+    [LEFT] = "LEFT",
+    [UP] = "UP",
+    [DOWN] = "DOWN",
+};
+
+int to_cell( char c ) {
+    bool is_valid_cell = c >= '0' && c <= '7';
+    if ( !is_valid_cell )
+        return -1;
+
+    return c - '0';
+}
+
+int get_cell_idx( Map *map, int r, int c ) {
+    return ( ( r - 1 ) * map->cols ) + c - 1;
+}
+
+int get_cell( Map *map, int r, int c ) {
+    int idx = get_cell_idx( map, r, c );
+    int val = map->cells[ idx ];
+
+    loginfo( "got cell %i at %ix%i", val, r, c );
+    return val;
+}
+
+bool out_of_bounds( Map *m, int r, int c ) {
+    return ( r < 1 || r > m->rows || c < 1 || c > m->cols );
+}
+
+bool has_passage_above( int r, int c ) { return ( ( ( r + c ) & 1 ) == 0 ); }
 
 /*
 
@@ -37,28 +76,19 @@ int read_map_size( Map *map, FILE *file ) {
     return 0;
 }
 
-int to_cell( char c ) {
-    bool is_valid_cell = c >= '0' && c <= '7';
-    if ( !is_valid_cell )
-        return -1;
-
-    return c - '0';
-}
-
 typedef enum processCharResult { OK, BAD_MAP, BAD_CELL } ProcessCharResult;
 
-ProcessCharResult process_char( Map *map, char c, int *row_ptr, int *col_ptr ) {
-    int row = *row_ptr;
-    int column = *col_ptr;
-
-    if ( c == ' ' ) {
+ProcessCharResult process_char( Map *map, char ch, int *row_ptr,
+                                int *col_ptr ) {
+    if ( ch == ' ' ) {
         return OK;
-    } else if ( c == '\n' ) {
-        bool all_columns_set = ( column - 1 ) == map->cols;
+    } else if ( ch == '\n' ) {
+        bool all_columns_set = ( *col_ptr - 1 ) == map->cols;
         if ( !all_columns_set )
             return BAD_MAP;
 
-        loginfo( "moving to the next line %i->%i", row, row + 1 );
+        loginfo( "moving to the next line(row) %i->%i", *row_ptr,
+                 *row_ptr + 1 );
 
         ( *row_ptr )++;
         *col_ptr = 1;
@@ -66,14 +96,15 @@ ProcessCharResult process_char( Map *map, char c, int *row_ptr, int *col_ptr ) {
         return OK;
     }
 
-    int cell = to_cell( c );
+    int cell = to_cell( ch );
     if ( cell == -1 ) {
         return BAD_CELL;
     }
 
-    int cell_idx = ( row * map->cols ) + column;
+    int cell_idx = get_cell_idx( map, *row_ptr, *col_ptr );
 
-    loginfo( "adding cell: %i", cell );
+    loginfo( "adding cell: %i at %ix%i with idx %i", cell, *row_ptr, *col_ptr,
+             cell_idx );
     map->cells[ cell_idx ] = cell;
     ( *col_ptr )++;
 
@@ -101,23 +132,19 @@ int read_map_cells( Map *map, FILE *file ) {
     return 0;
 }
 
-bool has_left_border( int cell ) {
-    return ( ( cell ^ 0b111 ) & 0b001 ) == 0b001;
-}
-bool has_right_border( int cell ) {
-    return ( ( cell ^ 0b111 ) & 0b010 ) == 0b010;
-}
-bool has_updown_border( int cell ) {
-    return ( ( cell ^ 0b111 ) & 0b100 ) == 0b100;
-}
+bool has_left_border( int cell ) { return ( cell & 0b001 ) == 0b001; }
+bool has_right_border( int cell ) { return ( cell & 0b010 ) == 0b010; }
+bool has_updown_border( int cell ) { return ( cell & 0b100 ) == 0b100; }
 
 bool check_right_border( Map *map, int cell, int r, int c ) {
-    bool has_right_cell = ( c + 1 ) <= map->cols;
-    if ( !has_right_cell )
+    if ( out_of_bounds( map, r, c + 1 ) ) {
+        loginfo( "went out of bounds at %ix%i", r, c + 1 );
         return true;
+    }
+    int right_cell = get_cell( map, r, c + 1 );
 
-    int right_cell_idx = ( r * map->cols ) + ( c + 1 );
-    int right_cell = map->cells[ right_cell_idx ];
+    loginfo( "comparing cell %i at %ix%i with cell on right %i at %ix%i", cell,
+             r, c, right_cell, r, c + 1 );
 
     if ( has_right_border( cell ) ^ has_left_border( right_cell ) ) {
         loginfo( "map cell at %ix%i with value `%i` is in a mismatch with its "
@@ -128,31 +155,28 @@ bool check_right_border( Map *map, int cell, int r, int c ) {
     return true;
 }
 
-bool has_passage_above( int r, int c ) { return ( ( ( r + c ) & 1 ) == 0 ); }
-
 bool check_down_border( Map *map, int cell, int r, int c ) {
     bool cell_goes_up = has_passage_above( r, c );
     if ( cell_goes_up )
         return true;
 
-    bool has_down_cell = ( r + 1 ) <= map->rows;
-    if ( !has_down_cell )
+    if ( out_of_bounds( map, r + 1, c ) ) {
+        loginfo( "went out of bounds at %ix%i", r + 1, c );
         return true;
+    }
+    int cell_below = get_cell( map, r + 1, c );
 
-    bool row_cell = map->cells[ ( r + 1 ) * c ];
+    loginfo( "comparing cell %i at %ix%i with cell below %i at %ix%i", cell, r,
+             c, cell_below, r + 1, c );
 
-    if ( has_updown_border( cell ) ^ has_updown_border( row_cell ) ) {
+    if ( has_updown_border( cell ) ^ has_updown_border( cell_below ) ) {
         loginfo( "cell at %ix%i with value `%i` is in a mismatch with a cell "
                  "beneath it with value `%i`",
-                 r, c, cell, row_cell );
+                 r, c, cell, cell_below );
         return false;
     }
 
     return true;
-}
-
-int get_cell( Map *map, int r, int c ) {
-    return map->cells[ ( r * map->cols ) + c ];
 }
 
 bool check_cell_valid( Map *map, int r, int c ) {
@@ -161,11 +185,7 @@ bool check_cell_valid( Map *map, int r, int c ) {
     bool right_border_valid = check_right_border( map, cell, r, c );
     bool down_border_valid = check_down_border( map, cell, r, c );
 
-    if ( !right_border_valid || !down_border_valid ) {
-        return false;
-    }
-
-    return true;
+    return right_border_valid && down_border_valid;
 }
 
 /* check vailidy of every cell's right & down border starting from top left
@@ -182,34 +202,27 @@ bool is_map_valid( Map *map ) {
     return true;
 }
 
-Map *allocate_map() {
-    Map *map = malloc( sizeof( Map ) );
-    if ( map == NULL )
-        return NULL;
-
-    map->rows = 0;
-    map->cols = 0;
-
-    map->cells = malloc( map->rows * map->cols );
-    if ( map->cells == NULL )
-        return NULL;
-
-    return map;
-}
-
 void destruct_map( Map *map ) {
     free( map->cells );
     free( map );
 }
 
 Map *load_map( FILE *file ) {
-    Map *map = allocate_map();
+    Map *map = malloc( sizeof( Map ) );
     if ( map == NULL ) {
+        free( map );
         return NULL;
     }
 
     if ( read_map_size( map, file ) != 0 ) {
-        destruct_map( map );
+        free( map );
+        return NULL;
+    }
+    loginfo( "map size is %ix%i", map->rows, map->cols );
+
+    map->cells = malloc( map->rows * map->cols );
+    if ( map->cells == NULL ) {
+        free( map );
         return NULL;
     }
 
@@ -232,22 +245,18 @@ STARTING POINT RESOLVEMENT
 
 */
 
-bool out_of_bounds( Map *m, int r, int c ) {
-    return ( r < 1 || r > m->rows || c < 1 || c > m->cols );
-}
-
 /* Resolve to what passage to look at next
 - first accessor is a strategy: LEFT_HAND / RIGHT_HAND
 - second accessor: Border where from player came
 - third accessor: Whether player's current cell has a passage UP
  */
 Border next_step_ruleset[ 2 ][ BORDER_COUNT ][ 2 ] = {
-    [RIGHT_HAND] = { [LEFT] = { DOWN, RIGHT },
-                     [RIGHT] = { LEFT, UP },
+    [RIGHT_HAND] = { [RIGHT] = { LEFT, UP },
+                     [LEFT] = { DOWN, RIGHT },
                      [UP] = { LEFT, LEFT },
                      [DOWN] = { RIGHT, RIGHT } },
-    [LEFT_HAND] = { [LEFT] = { RIGHT, UP },
-                    [RIGHT] = { DOWN, LEFT },
+    [LEFT_HAND] = { [RIGHT] = { DOWN, LEFT },
+                    [LEFT] = { RIGHT, UP },
                     [UP] = { RIGHT, RIGHT },
                     [DOWN] = { LEFT, LEFT } } };
 
@@ -272,34 +281,16 @@ Border start_border( Map *map, int r, int c, int leftright ) {
 
     Border came_from = resolve_came_from( map, r, c );
     if ( (int)came_from == -1 ) {
-        loginfo( "not entering the maze from borders (%ix%i)", r, c );
+        loginfo( "not entering the maze from its borders. Maze size: %ix%i", r,
+                 c );
         return -1;
     }
 
-    bool can_go_up = ( ( ( r + c ) & 1 ) == 0 );
+    bool can_go_up = has_passage_above( r, c );
+    Border direction = next_step_ruleset[ leftright ][ came_from ][ can_go_up ];
 
-    return next_step_ruleset[ leftright ][ came_from ][ can_go_up ];
+    return direction;
 }
-
-// void take_step( Map *m, int *r, int *c, Border *from ) {}
-
-// void solve_maze( Map *map, int r, int c, Strategy strategy ) {
-//     if ( strategy == SHORTEST ) {
-//         loginfo( "not implemented strategy: %i", strategy );
-//         return;
-//     }
-
-//     Border from = start_border( map, r, c, strategy );
-
-//     while ( true ) {
-//         if ( out_of_bounds( map, r, c ) ) {
-//             return;
-//         }
-//         printf( "%i, %i\n", r, c );
-
-//         take_step( map, &r, &c, &from );
-//     }
-// }
 
 /*
 
@@ -314,20 +305,76 @@ int move_incr[ BORDER_COUNT ][ 2 ] = {
     [DOWN] = { 1, 0 },
 };
 
+Border reverse_direction( Border b ) {
+    if ( b == LEFT )
+        return RIGHT;
+    if ( b == RIGHT )
+        return LEFT;
+    if ( b == UP )
+        return DOWN;
+    if ( b == DOWN )
+        return UP;
+    return -1;  // should be unreachable
+}
+
+Border take_step( Map *m, int *r, int *c, Strategy leftright,
+                  Border came_from ) {
+    Border direction = next_step_ruleset[ leftright ][ came_from ]
+                                        [ has_passage_above( *r, *c ) ];
+    loginfo( "direction is %s", border_str[ direction ] );
+
+    if ( isborder( m, *r, *c, direction ) ) {
+        loginfo( "has border on %s", border_str[ direction ] );
+        loginfo( "can not move to %s from %ix%i", border_str[ direction ], *r,
+                 *c );
+        return take_step( m, r, c, leftright, direction );
+    }
+
+    *r += move_incr[ direction ][ 0 ];
+    *c += move_incr[ direction ][ 1 ];
+
+    loginfo( "move %s to %ix%i", border_str[ direction ], *r, *c );
+
+    return reverse_direction( direction );
+}
+
+void solve_maze( Map *map, int r, int c, Strategy strategy ) {
+    if ( strategy == SHORTEST ) {
+        loginfo( "not implemented strategy: %i", strategy );
+        return;
+    }
+
+    Border came_from = resolve_came_from( map, r, c );
+    loginfo( "starting direction is %s", border_str[ came_from ] );
+
+    int steps = 0;
+    while ( true ) {
+        if ( out_of_bounds( map, r, c ) ) {
+            loginfo( "exit from maze was found in %i steps", steps );
+            return;
+        }
+        printf( "%i,%i\n", r, c );
+
+        came_from = take_step( map, &r, &c, strategy, came_from );
+        steps++;
+    }
+}
+
 bool moves_out_of_bounds( Map *m, int r, int c, Border direction ) {
     int moved_r = r + move_incr[ direction ][ 0 ];
     int moved_c = c + move_incr[ direction ][ 1 ];
     return out_of_bounds( m, moved_r, moved_c );
 }
 
-bool ( *solve_border_func[ 4 ] )( int ) = {
-    has_left_border,
-    has_right_border,
-    has_updown_border,
-    has_updown_border,
+bool ( *has_border_func[ 4 ] )( int ) = {
+    [RIGHT] = has_right_border,
+    [LEFT] = has_left_border,
+    [UP] = has_updown_border,
+    [DOWN] = has_updown_border,
 };
 
 bool isborder( Map *map, int r, int c, Border border ) {
     int cell = get_cell( map, r, c );
-    return ( *solve_border_func[ border ] )( cell );
+    bool has_border = ( *has_border_func[ border ] )( cell );
+    return has_border;
 }

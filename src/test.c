@@ -26,9 +26,7 @@ int main() {
     run_case( m, 1, 2, RIGHT_HAND, LEFT );
     run_case( m, m->rows, 2, RIGHT_HAND, RIGHT );
 
-    run_case( m, 1, 1, LEFT_HAND, UP );
-    run_case( m, 2, 1, LEFT_HAND, RIGHT );
-    run_case( m, 3, 1, LEFT_HAND, UP );
+    solve_maze( m, 6, 1, LEFT_HAND );
 
     return 0;
 }

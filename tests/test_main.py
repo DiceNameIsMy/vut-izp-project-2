@@ -18,10 +18,8 @@ class RunResult:
 
     def debugless_stderr(self) -> str:
         all_lines = self.stderr.split("\\n")
-        without_debug_lines = filter(
-            lambda line: not line.startswith("src/"), all_lines
-        )
-        return "\\n".join(without_debug_lines)
+        debugless_lines = filter(lambda line: not line.startswith("[INF]"), all_lines)
+        return "\\n".join(debugless_lines)
 
 
 def run_command(command: str) -> RunResult:
@@ -196,20 +194,89 @@ class TestMazeTesting:
 
 
 class TestRun:
-    def test_run_right_path(self):
-        result = run_program("--rpath 1 1 tests/mazes/valid_maze.txt")
+    RPATH_OUTPUT = """6,1
+6,2
+5,2
+5,3
+5,4
+6,4
+6,3
+6,4
+6,5
+6,6
+5,6
+5,7
+4,7
+4,6
+4,5
+4,4
+3,4
+3,5
+3,6
+3,5
+3,4
+3,3
+3,2
+3,1
+2,1
+2,2
+2,3
+2,4
+2,5
+2,6
+2,7
+3,7
+"""
+    LPATH_OUTPUT = """6,1
+6,2
+5,2
+5,3
+5,4
+6,4
+6,5
+6,6
+5,6
+5,7
+4,7
+4,6
+4,5
+5,5
+4,5
+4,4
+3,4
+3,3
+3,2
+4,2
+4,1
+5,1
+4,1
+4,2
+3,2
+3,1
+2,1
+2,2
+2,3
+2,4
+1,4
+1,3
+1,2
+1,1
+"""
 
-        assert result.code == 1
-        assert result.stderr == "--rpath is not implemented\n"
+    def test_run_right_path(self):
+        result = run_program("--rpath 6 1 tests/mazes/sample_maze.txt")
+
+        assert result.code == 0
+        assert result.stdout == self.RPATH_OUTPUT
 
     def test_run_left_path(self):
-        result = run_program("--lpath 1 1 tests/mazes/valid_maze.txt")
+        result = run_program("--lpath 6 1 tests/mazes/sample_maze.txt")
 
-        assert result.code == 1
-        assert result.stderr == "--lpath is not implemented\n"
+        assert result.code == 0
+        assert result.stdout == self.LPATH_OUTPUT
 
     def test_run_shortest(self):
-        result = run_program("--shortest 1 1 tests/mazes/valid_maze.txt")
+        result = run_program("--shortest 6 1 tests/mazes/valid_maze.txt")
 
         assert result.code == 1
         assert result.stderr == "--shortest is not implemented\n"

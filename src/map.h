@@ -5,7 +5,7 @@
 #ifndef MAP_H
 #define MAP_H
 
-typedef enum strategy { RIGHT_HAND, LEFT_HAND, SHORTEST } Strategy;
+typedef enum strategy { RIGHT_HAND = 0, LEFT_HAND = 1, SHORTEST = 2 } Strategy;
 
 /* ## Represents a map of the maze.
 

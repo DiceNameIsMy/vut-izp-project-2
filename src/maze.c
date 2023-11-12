@@ -27,7 +27,13 @@ static const char UNKNOWN_STRATEGY_ERROR[] =
 
 bool has_help_flag( int argc, char *argv[] );
 
+Map *load_maze( char *filename );
+
 void test_maze( char *filename );
+
+Strategy get_strategy( char *option );
+
+void _solve_maze( char *filename, Position start_at, Strategy strategy );
 
 int get_starting_position( char *row, char *column, Position *position );
 
@@ -52,7 +58,14 @@ int main( int argc, char *argv[] ) {
         return 0;
 
     } else if ( argc == 5 ) {
-        char *solving_strategy = argv[ 1 ];
+        Strategy strategy = get_strategy( argv[ 1 ] );
+        if ( (int)strategy == -1 ) {
+            fprintf( stderr, UNKNOWN_STRATEGY_ERROR, argv[ 1 ] );
+            return 1;
+        } else if ( strategy == SHORTEST ) {
+            fprintf( stderr, "--shortest is not implemented\n" );
+            return 1;
+        }
 
         Position start_at;
         int r = get_starting_position( argv[ 2 ], argv[ 3 ], &start_at );
@@ -60,21 +73,9 @@ int main( int argc, char *argv[] ) {
             return 1;
         }
 
-        // char *maze_filename = argv[ 4 ];
-
-        if ( strcmp( solving_strategy, "--rpath" ) == 0 ) {
-            fprintf( stderr, "--rpath is not implemented\n" );
-            return 1;
-        } else if ( strcmp( solving_strategy, "--lpath" ) == 0 ) {
-            fprintf( stderr, "--lpath is not implemented\n" );
-            return 1;
-        } else if ( strcmp( solving_strategy, "--shortest" ) == 0 ) {
-            fprintf( stderr, "--shortest is not implemented\n" );
-            return 1;
-        } else {
-            fprintf( stderr, UNKNOWN_STRATEGY_ERROR, solving_strategy );
-            return 1;
-        }
+        char *maze_filename = argv[ 4 ];
+        _solve_maze( maze_filename, start_at, strategy );
+        return 0;
     }
 
     fprintf( stderr, INVALID_ARGS_AMOUNT_ERROR );
@@ -90,21 +91,36 @@ bool has_help_flag( int argc, char *argv[] ) {
     return false;
 }
 
-void test_maze( char *filename ) {
-    FILE *maze_file = fopen( filename, "r" );
-    if ( maze_file == NULL ) {
-        printf( "Invalid\n" );
-        return;
-    }
+Map *load_maze( char *filename ) {
+    FILE *file = fopen( filename, "r" );
+    if ( file == NULL )
+        return NULL;
 
-    Map *map = load_map( maze_file );
-    fclose( maze_file );
+    Map *map = load_map( file );
+
+    fclose( file );
+
+    return map;
+}
+
+void test_maze( char *filename ) {
+    Map *map = load_maze( filename );
 
     if ( map == NULL ) {
         printf( "Invalid\n" );
         return;
     }
     printf( "Valid\n" );
+    destruct_map( map );
+}
+
+void _solve_maze( char *filename, Position start_at, Strategy strategy ) {
+    Map *map = load_maze( filename );
+    if ( map == NULL ) {
+        return;
+    }
+    solve_maze( map, start_at.row, start_at.column, strategy );
+
     destruct_map( map );
 }
 
@@ -126,4 +142,15 @@ int get_starting_position( char *row, char *column, Position *position ) {
     position->row = start_row;
     position->column = start_column;
     return 0;
+}
+
+Strategy get_strategy( char *option ) {
+    if ( strcmp( option, "--rpath" ) == 0 ) {
+        return RIGHT_HAND;
+    } else if ( strcmp( option, "--lpath" ) == 0 ) {
+        return LEFT_HAND;
+    } else if ( strcmp( option, "--shortest" ) == 0 ) {
+        return SHORTEST;
+    }
+    return -1;
 }
