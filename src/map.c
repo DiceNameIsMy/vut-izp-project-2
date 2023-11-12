@@ -1,4 +1,4 @@
-// #define NDEBUG
+#define NDEBUG
 
 #include "map.h"
 
@@ -68,7 +68,7 @@ int read_map_size( Map *map, FILE *file ) {
     bool loaded_both_items = r == 2;
 
     if ( !loaded_both_items || rows < 1 || columns < 1 )
-        return 1;
+        return -1;
 
     map->rows = rows;
     map->cols = columns;
@@ -123,10 +123,10 @@ int read_map_cells( Map *map, FILE *file ) {
             loginfo( "tried moving to a next row %i->%i but not all columns "
                      "were set (%i out of %i)",
                      row, row + 1, column - 1, map->cols );
-            return 1;
+            return -1;
         } else if ( r == BAD_CELL ) {
             loginfo( "encountered char `%c` which is not a valid number", c );
-            return 1;
+            return -1;
         }
     }
     return 0;
@@ -214,7 +214,7 @@ Map *load_map( FILE *file ) {
         return NULL;
     }
 
-    if ( read_map_size( map, file ) != 0 ) {
+    if ( read_map_size( map, file ) == -1 ) {
         free( map );
         return NULL;
     }
@@ -226,7 +226,7 @@ Map *load_map( FILE *file ) {
         return NULL;
     }
 
-    if ( read_map_cells( map, file ) != 0 ) {
+    if ( read_map_cells( map, file ) == -1 ) {
         destruct_map( map );
         return NULL;
     }

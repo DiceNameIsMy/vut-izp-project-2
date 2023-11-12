@@ -122,12 +122,12 @@ int set_starting_position( char *str_row, char *str_column,
     int row = parse_positive_int( str_row );
     if ( row == -1 ) {
         fprintf( stderr, INVALID_ARGS_ERROR, str_row );
-        return 1;
+        return -1;
     }
     int column = parse_positive_int( str_column );
     if ( column == -1 ) {
         fprintf( stderr, INVALID_ARGS_ERROR, str_column );
-        return 1;
+        return -1;
     }
 
     position->row = row;
@@ -146,7 +146,7 @@ int try_solve_maze( char *option, char *row, char *column, char *filename ) {
     }
 
     Position start_at;
-    if ( set_starting_position( row, column, &start_at ) != 0 ) {
+    if ( set_starting_position( row, column, &start_at ) == -1 ) {
         return 1;
     }
 
