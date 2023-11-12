@@ -7,6 +7,8 @@
 
 typedef enum strategy { RIGHT_HAND = 0, LEFT_HAND = 1, SHORTEST = 2 } Strategy;
 
+typedef enum border { RIGHT, LEFT, UP, DOWN, BORDER_COUNT } Border;
+
 /* ## Represents a map of the maze.
 
 cells - each char represents a cell with 3 passages in the maze.
@@ -33,8 +35,6 @@ typedef struct map {
 Map *load_map( FILE *file );
 
 void destruct_map( Map *map );
-
-typedef enum border { RIGHT, LEFT, UP, DOWN, BORDER_COUNT } Border;
 
 // Do not change
 bool isborder( Map *map, int r, int c, Border border );
