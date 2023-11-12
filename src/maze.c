@@ -5,6 +5,15 @@
 
 #include "map.h"
 
+/*
+
+QUESTIONS:
+
+Should we validate that maze has any exits?
+Should we validate that entering cell has an entrance?
+
+*/
+
 typedef struct position {
     int row;
     int column;
@@ -61,18 +70,6 @@ bool has_help_flag( int argc, char *argv[] ) {
         }
     }
     return false;
-}
-
-Map *load_maze( char *filename ) {
-    FILE *file = fopen( filename, "r" );
-    if ( file == NULL )
-        return NULL;
-
-    Map *map = load_map( file );
-
-    fclose( file );
-
-    return map;
 }
 
 int try_test_maze( char *option, char *filename ) {
