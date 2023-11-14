@@ -51,6 +51,19 @@ bool out_of_bounds( Map *m, int r, int c ) {
     return ( r < 1 || r > m->rows || c < 1 || c > m->cols );
 }
 
+int move_incr[ BORDER_COUNT ][ 2 ] = {
+    [RIGHT] = { 0, 1 },
+    [LEFT] = { 0, -1 },
+    [UP] = { -1, 0 },
+    [DOWN] = { 1, 0 },
+};
+
+bool moves_out_of_bounds( Map *m, int r, int c, Border direction ) {
+    int moved_r = r + move_incr[ direction ][ 0 ];
+    int moved_c = c + move_incr[ direction ][ 1 ];
+    return out_of_bounds( m, moved_r, moved_c );
+}
+
 bool has_passage_above( int r, int c ) { return ( ( ( r + c ) & 1 ) == 0 ); }
 
 /*
@@ -137,7 +150,7 @@ bool has_right_border( int cell ) { return ( cell & 0b010 ) == 0b010; }
 bool has_updown_border( int cell ) { return ( cell & 0b100 ) == 0b100; }
 
 bool check_right_border( Map *map, int cell, int r, int c ) {
-    if ( out_of_bounds( map, r, c + 1 ) ) {
+    if ( moves_out_of_bounds( map, r, c, RIGHT ) ) {
         loginfo( "went out of bounds at %ix%i", r, c + 1 );
         return true;
     }
@@ -160,7 +173,7 @@ bool check_down_border( Map *map, int cell, int r, int c ) {
     if ( cell_goes_up )
         return true;
 
-    if ( out_of_bounds( map, r + 1, c ) ) {
+    if ( moves_out_of_bounds( map, r, c, DOWN ) ) {
         loginfo( "went out of bounds at %ix%i", r + 1, c );
         return true;
     }
@@ -273,6 +286,13 @@ Border resolve_came_from( Map *map, int r, int c ) {
     return -1;
 }
 
+/*
+
+TODO: Use start_border function. Instead of passing came_from, pass direction,
+and return not came_from, but direction
+
+*/
+
 Border start_border( Map *map, int r, int c, int leftright ) {
     if ( leftright == SHORTEST ) {
         loginfo( "invalid leftright value %i", leftright );
@@ -298,12 +318,18 @@ NOT GROUPED YET
 
 */
 
-int move_incr[ BORDER_COUNT ][ 2 ] = {
-    [RIGHT] = { 0, 1 },
-    [LEFT] = { 0, -1 },
-    [UP] = { -1, 0 },
-    [DOWN] = { 1, 0 },
+bool ( *has_border_func[ 4 ] )( int ) = {
+    [RIGHT] = has_right_border,
+    [LEFT] = has_left_border,
+    [UP] = has_updown_border,
+    [DOWN] = has_updown_border,
 };
+
+bool isborder( Map *map, int r, int c, Border border ) {
+    int cell = get_cell( map, r, c );
+    bool has_border = ( *has_border_func[ border ] )( cell );
+    return has_border;
+}
 
 Border reverse_direction[ BORDER_COUNT ] = {
     [RIGHT] = LEFT, [LEFT] = RIGHT, [UP] = DOWN, [DOWN] = UP };
@@ -349,23 +375,4 @@ void solve_maze( Map *map, int r, int c, Strategy strategy ) {
         came_from = take_step( map, &r, &c, strategy, came_from );
         steps++;
     }
-}
-
-bool moves_out_of_bounds( Map *m, int r, int c, Border direction ) {
-    int moved_r = r + move_incr[ direction ][ 0 ];
-    int moved_c = c + move_incr[ direction ][ 1 ];
-    return out_of_bounds( m, moved_r, moved_c );
-}
-
-bool ( *has_border_func[ 4 ] )( int ) = {
-    [RIGHT] = has_right_border,
-    [LEFT] = has_left_border,
-    [UP] = has_updown_border,
-    [DOWN] = has_updown_border,
-};
-
-bool isborder( Map *map, int r, int c, Border border ) {
-    int cell = get_cell( map, r, c );
-    bool has_border = ( *has_border_func[ border ] )( cell );
-    return has_border;
 }
