@@ -273,7 +273,7 @@ Border next_step_ruleset[ 2 ][ BORDER_COUNT ][ 2 ] = {
                     [UP] = { RIGHT, RIGHT },
                     [DOWN] = { LEFT, LEFT } } };
 
-Border resolve_came_from( Map *map, int r, int c ) {
+Border entered_maze_from( Map *map, int r, int c ) {
     if ( c == 1 )
         return LEFT;
     else if ( c == map->cols )
@@ -286,12 +286,19 @@ Border resolve_came_from( Map *map, int r, int c ) {
     return -1;
 }
 
-/*
+Border resolve_direction( Map *m, int r, int c, Strategy leftright,
+                          Border came_from ) {
+    bool can_go_up = has_passage_above( r, c );
+    Border dir = next_step_ruleset[ leftright ][ came_from ][ can_go_up ];
 
-TODO: Use start_border function. Instead of passing came_from, pass direction,
-and return not came_from, but direction
+    if ( isborder( m, r, c, dir ) ) {
+        return resolve_direction( m, r, c, leftright, dir );
+    }
+    return dir;
+}
 
-*/
+Border reverse_direction[ BORDER_COUNT ] = {
+    [RIGHT] = LEFT, [LEFT] = RIGHT, [UP] = DOWN, [DOWN] = UP };
 
 Border start_border( Map *map, int r, int c, int leftright ) {
     if ( leftright == SHORTEST ) {
@@ -299,17 +306,14 @@ Border start_border( Map *map, int r, int c, int leftright ) {
         return -1;
     }
 
-    Border came_from = resolve_came_from( map, r, c );
-    if ( (int)came_from == -1 ) {
+    Border entered_from = entered_maze_from( map, r, c );
+    if ( (int)entered_from == -1 ) {
         loginfo( "not entering the maze from its borders. Maze size: %ix%i", r,
                  c );
         return -1;
     }
 
-    bool can_go_up = has_passage_above( r, c );
-    Border direction = next_step_ruleset[ leftright ][ came_from ][ can_go_up ];
-
-    return direction;
+    return resolve_direction( map, r, c, leftright, entered_from );
 }
 
 /*
@@ -331,48 +335,35 @@ bool isborder( Map *map, int r, int c, Border border ) {
     return has_border;
 }
 
-Border reverse_direction[ BORDER_COUNT ] = {
-    [RIGHT] = LEFT, [LEFT] = RIGHT, [UP] = DOWN, [DOWN] = UP };
-
-Border take_step( Map *m, int *r, int *c, Strategy leftright,
-                  Border came_from ) {
-    Border direction = next_step_ruleset[ leftright ][ came_from ]
-                                        [ has_passage_above( *r, *c ) ];
-    loginfo( "direction is %s", border_str[ direction ] );
-
-    if ( isborder( m, *r, *c, direction ) ) {
-        loginfo( "has border on %s", border_str[ direction ] );
-        loginfo( "can not move to %s from %ix%i", border_str[ direction ], *r,
-                 *c );
-        return take_step( m, r, c, leftright, direction );
-    }
-
-    *r += move_incr[ direction ][ 0 ];
-    *c += move_incr[ direction ][ 1 ];
-
-    loginfo( "move %s to %ix%i", border_str[ direction ], *r, *c );
-
-    return reverse_direction[ direction ];
-}
-
 void solve_maze( Map *map, int r, int c, Strategy strategy ) {
     if ( strategy == SHORTEST ) {
         loginfo( "not implemented strategy: %i", strategy );
         return;
     }
 
-    Border came_from = resolve_came_from( map, r, c );
-    loginfo( "starting direction is %s", border_str[ came_from ] );
+    Border direction = start_border( map, r, c, strategy );
+    if ( (int)direction == -1 ) {
+        loginfo( "failed to get the starting border with entering points %ix%i",
+                 r, c );
+        return;
+    }
+    loginfo( "starting direction is %s", border_str[ direction ] );
 
     int steps = 0;
     while ( true ) {
+        // Act
+        printf( "%i,%i\n", r, c );
+
+        // Move
+        r += move_incr[ direction ][ 0 ];
+        c += move_incr[ direction ][ 1 ];
         if ( out_of_bounds( map, r, c ) ) {
             loginfo( "exit from maze was found in %i steps", steps );
             return;
         }
-        printf( "%i,%i\n", r, c );
 
-        came_from = take_step( map, &r, &c, strategy, came_from );
+        Border came_from = reverse_direction[ direction ];
+        direction = resolve_direction( map, r, c, strategy, came_from );
         steps++;
     }
 }
