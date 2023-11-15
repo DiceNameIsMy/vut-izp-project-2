@@ -9,6 +9,11 @@ typedef enum strategy { RIGHT_HAND = 0, LEFT_HAND = 1, SHORTEST = 2 } Strategy;
 
 typedef enum border { RIGHT, LEFT, UP, DOWN, BORDER_COUNT } Border;
 
+typedef struct position {
+    int row;
+    int column;
+} Position;
+
 /* ## Represents a map of the maze.
 
 cells - each char represents a cell with 3 passages in the maze.

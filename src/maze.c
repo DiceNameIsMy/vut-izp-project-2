@@ -14,11 +14,6 @@ Should we validate that entering cell has an entrance?
 
 */
 
-typedef struct position {
-    int row;
-    int column;
-} Position;
-
 static const char HELP_TEXT[] =
     ""
     "Usage: ./maze [options] file...\n"
