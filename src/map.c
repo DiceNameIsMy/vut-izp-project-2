@@ -335,7 +335,8 @@ bool isborder( Map *map, int r, int c, Border border ) {
     return has_border;
 }
 
-void solve_maze( Map *map, int r, int c, Strategy strategy ) {
+void solve_maze( Map *map, int r, int c, Strategy strategy,
+                 on_step_func_t on_step_func ) {
     if ( strategy == SHORTEST ) {
         loginfo( "not implemented strategy: %i", strategy );
         return;
@@ -352,7 +353,7 @@ void solve_maze( Map *map, int r, int c, Strategy strategy ) {
     int steps = 0;
     while ( true ) {
         // Act
-        printf( "%i,%i\n", r, c );
+        on_step_func( r, c );
 
         // Move
         r += move_incr[ direction ][ 0 ];

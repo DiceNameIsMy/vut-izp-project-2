@@ -130,6 +130,8 @@ int set_starting_position( char *str_row, char *str_column,
     return 0;
 }
 
+void print_location( int r, int c ) { printf( "%i,%i\n", r, c ); }
+
 int try_solve_maze( char *option, char *row, char *column, char *filename ) {
     Strategy strategy = get_strategy( option );
     if ( (int)strategy == -1 ) {
@@ -156,7 +158,7 @@ int try_solve_maze( char *option, char *row, char *column, char *filename ) {
     if ( map == NULL ) {
         return 1;
     }
-    solve_maze( map, start_at.row, start_at.column, strategy );
+    solve_maze( map, start_at.row, start_at.column, strategy, print_location );
 
     destruct_map( map );
     return 0;

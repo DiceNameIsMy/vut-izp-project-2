@@ -9,6 +9,8 @@ typedef enum strategy { RIGHT_HAND = 0, LEFT_HAND = 1, SHORTEST = 2 } Strategy;
 
 typedef enum border { RIGHT, LEFT, UP, DOWN, BORDER_COUNT } Border;
 
+typedef void ( *on_step_func_t )( int r, int c );
+
 typedef struct position {
     int row;
     int column;
@@ -50,6 +52,7 @@ Do not change
 */
 Border start_border( Map *map, int r, int c, int leftright );
 
-void solve_maze( Map *map, int r, int c, Strategy strategy );
+void solve_maze( Map *map, int r, int c, Strategy strategy,
+                 on_step_func_t on_step_func );
 
 #endif
