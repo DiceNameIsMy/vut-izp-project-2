@@ -47,7 +47,7 @@ int get_cell( Map *map, int r, int c ) {
     return val;
 }
 
-bool out_of_bounds( Map *m, int r, int c ) {
+bool out_of_maze( Map *m, int r, int c ) {
     return ( r < 1 || r > m->rows || c < 1 || c > m->cols );
 }
 
@@ -58,10 +58,10 @@ int move_incr[ BORDER_COUNT ][ 2 ] = {
     [DOWN] = { 1, 0 },
 };
 
-bool moves_out_of_bounds( Map *m, int r, int c, Border direction ) {
+bool moves_out_of_maze( Map *m, int r, int c, Border direction ) {
     int moved_r = r + move_incr[ direction ][ 0 ];
     int moved_c = c + move_incr[ direction ][ 1 ];
-    return out_of_bounds( m, moved_r, moved_c );
+    return out_of_maze( m, moved_r, moved_c );
 }
 
 bool has_passage_above( int r, int c ) { return ( ( ( r + c ) & 1 ) == 0 ); }
@@ -150,7 +150,7 @@ bool has_right_border( int cell ) { return ( cell & 0b010 ) == 0b010; }
 bool has_updown_border( int cell ) { return ( cell & 0b100 ) == 0b100; }
 
 bool check_right_border( Map *map, int cell, int r, int c ) {
-    if ( moves_out_of_bounds( map, r, c, RIGHT ) ) {
+    if ( moves_out_of_maze( map, r, c, RIGHT ) ) {
         loginfo( "went out of bounds at %ix%i", r, c + 1 );
         return true;
     }
@@ -173,7 +173,7 @@ bool check_down_border( Map *map, int cell, int r, int c ) {
     if ( cell_goes_up )
         return true;
 
-    if ( moves_out_of_bounds( map, r, c, DOWN ) ) {
+    if ( moves_out_of_maze( map, r, c, DOWN ) ) {
         loginfo( "went out of bounds at %ix%i", r + 1, c );
         return true;
     }
@@ -357,7 +357,7 @@ void solve_maze( Map *map, int r, int c, Strategy strategy ) {
         // Move
         r += move_incr[ direction ][ 0 ];
         c += move_incr[ direction ][ 1 ];
-        if ( out_of_bounds( map, r, c ) ) {
+        if ( out_of_maze( map, r, c ) ) {
             loginfo( "exit from maze was found in %i steps", steps );
             return;
         }
