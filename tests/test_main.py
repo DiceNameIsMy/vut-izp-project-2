@@ -291,7 +291,6 @@ class TestRun:
 2,6
 2,7
 3,7
-3,8
 """
 
     def test_run_right_path(self):

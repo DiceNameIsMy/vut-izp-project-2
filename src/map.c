@@ -401,6 +401,7 @@ bool run_iteration( Map *map, Path *from, int *weights ) {
             continue;
         }
 
+        // Check if this iteration is the shortest
         if ( shortest_path == NULL ) {
             shortest_path = next;
             continue;
@@ -413,12 +414,15 @@ bool run_iteration( Map *map, Path *from, int *weights ) {
         } else {
             destruct_path( next );
         }
+        //
     }
 
-    from->next = shortest_path;
-
-    bool found_exit = shortest_path != NULL;
-    return found_exit;
+    if ( shortest_path == NULL ) {
+        return false;
+    } else {
+        from->next = shortest_path;
+        return true;
+    }
 }
 
 int *init_weights( Map *map ) {
@@ -451,7 +455,7 @@ void solve_shortest( Map *map, int r, int c, on_step_func_t on_step_func ) {
     }
 
     Path *next = path;
-    while ( next != NULL ) {
+    while ( next != NULL && !out_of_maze( map, next->r, next->c ) ) {
         on_step_func( next->r, next->c );
 
         Path *prev = next;
