@@ -351,10 +351,13 @@ Path *init_path( int r, int c, int depth ) {
     return path;
 }
 
-void destruct_path( Path *p ) {
+void destruct_path( Path *p ) { free( p ); }
+
+void destruct_all_paths( Path *p ) {
     if ( p->next != NULL )
-        destruct_path( p->next );
-    free( p );
+        destruct_all_paths( p->next );
+
+    destruct_path( p );
 }
 
 void log_weights( Map *m, int *weights ) {
@@ -393,8 +396,9 @@ bool run_iteration( Map *map, Path *from, int *weights ) {
         if ( has_border )
             continue;
 
-        Path *next = init_path( move_r( from->r, direction ),
-                                move_c( from->c, direction ), from->depth + 1 );
+        int next_r = move_r( from->r, direction );
+        int next_c = move_c( from->c, direction );
+        Path *next = init_path( next_r, next_c, from->depth + 1 );
 
         int found_exit = run_iteration( map, next, weights );
         if ( !found_exit ) {
@@ -409,10 +413,10 @@ bool run_iteration( Map *map, Path *from, int *weights ) {
 
         bool next_path_is_shorter = next->depth < shortest_path->depth;
         if ( next_path_is_shorter ) {
-            destruct_path( shortest_path );
+            destruct_all_paths( shortest_path );
             shortest_path = next;
         } else {
-            destruct_path( next );
+            destruct_all_paths( next );
         }
         //
     }
@@ -460,7 +464,7 @@ void solve_shortest( Map *map, int r, int c, on_step_func_t on_step_func ) {
 
         Path *prev = next;
         next = next->next;
-        free( prev );
+        destruct_path( prev );
     }
     log_weights( map, weights );
 
