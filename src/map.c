@@ -58,9 +58,17 @@ int move_incr[ BORDER_COUNT ][ 2 ] = {
     [DOWN] = { 1, 0 },
 };
 
+int move_r( int r, Border direction ) {
+    return r + move_incr[ direction ][ 0 ];
+}
+
+int move_c( int c, Border direction ) {
+    return c + move_incr[ direction ][ 1 ];
+}
+
 bool moves_out_of_maze( Map *m, int r, int c, Border direction ) {
-    int moved_r = r + move_incr[ direction ][ 0 ];
-    int moved_c = c + move_incr[ direction ][ 1 ];
+    int moved_r = move_r(r, direction);
+    int moved_c = move_c(c, direction);
     return out_of_maze( m, moved_r, moved_c );
 }
 
@@ -356,8 +364,8 @@ void solve_maze( Map *map, int r, int c, Strategy strategy,
         on_step_func( r, c );
 
         // Move
-        r += move_incr[ direction ][ 0 ];
-        c += move_incr[ direction ][ 1 ];
+        r = move_r(r, direction);
+        c = move_c(c, direction);
         if ( out_of_maze( map, r, c ) ) {
             loginfo( "exit from maze was found in %i steps", steps );
             return;
