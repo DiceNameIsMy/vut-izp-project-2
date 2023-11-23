@@ -137,9 +137,6 @@ int try_solve_maze( char *option, char *row, char *column, char *filename ) {
     if ( (int)strategy == -1 ) {
         fprintf( stderr, UNKNOWN_STRATEGY_ERROR, option );
         return 1;
-    } else if ( strategy == SHORTEST ) {
-        fprintf( stderr, "--shortest is not implemented\n" );
-        return 1;
     }
 
     Position start_at;

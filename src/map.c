@@ -1,4 +1,4 @@
-#define NDEBUG
+// #define NDEBUG
 
 #include "map.h"
 
@@ -42,8 +42,6 @@ int get_cell_idx( Map *map, int r, int c ) {
 int get_cell( Map *map, int r, int c ) {
     int idx = get_cell_idx( map, r, c );
     int val = map->cells[ idx ];
-
-    loginfo( "got cell %i at %ix%i", val, r, c );
     return val;
 }
 
@@ -51,6 +49,10 @@ bool out_of_maze( Map *m, int r, int c ) {
     return ( r < 1 || r > m->rows || c < 1 || c > m->cols );
 }
 
+/* Mapping of how does row and column change when moving to some direction.
+First idx represents Border enum.
+Second idx represents row(0) and column(1).
+*/
 int move_incr[ BORDER_COUNT ][ 2 ] = {
     [RIGHT] = { 0, 1 },
     [LEFT] = { 0, -1 },
@@ -67,8 +69,8 @@ int move_c( int c, Border direction ) {
 }
 
 bool moves_out_of_maze( Map *m, int r, int c, Border direction ) {
-    int moved_r = move_r(r, direction);
-    int moved_c = move_c(c, direction);
+    int moved_r = move_r( r, direction );
+    int moved_c = move_c( c, direction );
     return out_of_maze( m, moved_r, moved_c );
 }
 
@@ -297,9 +299,11 @@ Border entered_maze_from( Map *map, int r, int c ) {
 Border resolve_direction( Map *m, int r, int c, Strategy leftright,
                           Border came_from ) {
     bool can_go_up = has_passage_above( r, c );
+
     Border dir = next_step_ruleset[ leftright ][ came_from ][ can_go_up ];
 
     if ( isborder( m, r, c, dir ) ) {
+        loginfo( "can not go %s", border_str[ dir ] );
         return resolve_direction( m, r, c, leftright, dir );
     }
     return dir;
@@ -320,8 +324,143 @@ Border start_border( Map *map, int r, int c, int leftright ) {
                  c );
         return -1;
     }
+    loginfo( "entered maze from %s", border_str[ entered_from ] );
 
     return resolve_direction( map, r, c, leftright, entered_from );
+}
+
+/*
+
+SHORTEST PATH ALGORITHM
+
+*/
+
+typedef struct path {
+    int r;
+    int c;
+    int depth;
+    struct path *next;
+} Path;
+
+Path *init_path( int r, int c, int depth ) {
+    Path *path = malloc( sizeof( Path ) );
+    path->r = r;
+    path->c = c;
+    path->depth = depth;
+    path->next = NULL;
+    return path;
+}
+
+void destruct_path( Path *p ) {
+    if ( p->next != NULL )
+        destruct_path( p->next );
+    free( p );
+}
+
+void log_weights( Map *m, int *weights ) {
+    for ( int i = 1; i <= m->rows; i++ ) {
+        for ( int j = 1; j <= m->cols; j++ ) {
+            int w = weights[ get_cell_idx( m, i, j ) ];
+            fprintf( stderr, "[%i]", w );
+        }
+        fprintf( stderr, "\n" );
+    }
+}
+
+bool run_iteration( Map *map, Path *from, int *weights ) {
+    bool moves_out_of_maze = out_of_maze( map, from->r, from->c );
+    if ( moves_out_of_maze )
+        return true;
+
+    int *iteration_depth = &weights[ get_cell_idx( map, from->r, from->c ) ];
+
+    bool reached_faster_in_less_steps =
+        ( *iteration_depth != -1 ) && ( from->depth >= *iteration_depth );
+    if ( reached_faster_in_less_steps ) {
+        return false;
+    }
+
+    *iteration_depth = from->depth;
+
+    loginfo( "iterating at %ix%i, with depth %i", from->r, from->c,
+             from->depth );
+
+    Path *shortest_path = NULL;
+
+    // For each possible direction
+    for ( Border direction = 0; direction < BORDER_COUNT; direction++ ) {
+        bool has_border = isborder( map, from->r, from->c, direction );
+        if ( has_border )
+            continue;
+
+        Path *next = init_path( move_r( from->r, direction ),
+                                move_c( from->c, direction ), from->depth + 1 );
+
+        int found_exit = run_iteration( map, next, weights );
+        if ( !found_exit ) {
+            continue;
+        }
+
+        if ( shortest_path == NULL ) {
+            shortest_path = next;
+            continue;
+        }
+
+        bool next_path_is_shorter = next->depth < shortest_path->depth;
+        if ( next_path_is_shorter ) {
+            destruct_path( shortest_path );
+            shortest_path = next;
+        } else {
+            destruct_path( next );
+        }
+    }
+
+    from->next = shortest_path;
+
+    bool found_exit = shortest_path != NULL;
+    return found_exit;
+}
+
+int *init_weights( Map *map ) {
+    int amount_of_cells = 1;
+    amount_of_cells *= (int)map->rows;
+    amount_of_cells *= (int)map->cols;
+
+    int *weights = malloc( sizeof( int ) * amount_of_cells );
+    if ( weights == NULL ) {
+        // TODO
+    }
+    for ( int i = 0; i < amount_of_cells; i++ ) {
+        weights[ i ] = -1;
+    }
+
+    return weights;
+}
+
+void destruct_weights( int *weights ) { free( weights ); }
+
+void solve_shortest( Map *map, int r, int c, on_step_func_t on_step_func ) {
+    Path *path = init_path( r, c, 1 );
+    int *weights = init_weights( map );
+
+    run_iteration( map, path, weights );
+
+    if ( path->next == NULL ) {
+        // there is no exit
+        return;
+    }
+
+    Path *next = path;
+    while ( next != NULL ) {
+        on_step_func( next->r, next->c );
+
+        Path *prev = next;
+        next = next->next;
+        free( prev );
+    }
+    log_weights( map, weights );
+
+    destruct_weights( weights );
 }
 
 /*
@@ -330,23 +469,30 @@ NOT GROUPED YET
 
 */
 
-bool ( *has_border_func[ 4 ] )( int ) = {
-    [RIGHT] = has_right_border,
-    [LEFT] = has_left_border,
-    [UP] = has_updown_border,
-    [DOWN] = has_updown_border,
-};
-
 bool isborder( Map *map, int r, int c, Border border ) {
     int cell = get_cell( map, r, c );
-    bool has_border = ( *has_border_func[ border ] )( cell );
-    return has_border;
+
+    if ( border == LEFT )
+        return has_left_border( cell );
+    else if ( border == RIGHT )
+        return has_right_border( cell );
+    else if ( border == DOWN ) {
+        bool has_border = ( cell & 0b100 ) == 0b100;
+        return has_passage_above( r, c ) || has_border;
+    } else if ( border == UP ) {
+        bool has_border = ( cell & 0b100 ) == 0b100;
+        return !has_passage_above( r, c ) || has_border;
+    }
+
+    loginfo( "invalid border value: %i. this state should be unreachable",
+             border );
+    return true;
 }
 
 void solve_maze( Map *map, int r, int c, Strategy strategy,
                  on_step_func_t on_step_func ) {
     if ( strategy == SHORTEST ) {
-        loginfo( "not implemented strategy: %i", strategy );
+        solve_shortest( map, r, c, on_step_func );
         return;
     }
 
@@ -364,8 +510,8 @@ void solve_maze( Map *map, int r, int c, Strategy strategy,
         on_step_func( r, c );
 
         // Move
-        r = move_r(r, direction);
-        c = move_c(c, direction);
+        r = move_r( r, direction );
+        c = move_c( c, direction );
         if ( out_of_maze( map, r, c ) ) {
             loginfo( "exit from maze was found in %i steps", steps );
             return;
