@@ -351,7 +351,10 @@ Path *init_path( int r, int c, int depth ) {
     return path;
 }
 
-void destruct_path( Path *p ) { free( p ); }
+void destruct_path( Path *p ) {
+    loginfo( "freeing path at %ix%i with depth of %i", p->r, p->c, p->depth );
+    free( p );
+}
 
 void destruct_all_paths( Path *p ) {
     if ( p->next != NULL )
@@ -402,6 +405,7 @@ bool run_iteration( Map *map, Path *from, int *weights ) {
 
         int found_exit = run_iteration( map, next, weights );
         if ( !found_exit ) {
+            destruct_path( next );
             continue;
         }
 
@@ -459,8 +463,10 @@ void solve_shortest( Map *map, int r, int c, on_step_func_t on_step_func ) {
     }
 
     Path *next = path;
-    while ( next != NULL && !out_of_maze( map, next->r, next->c ) ) {
-        on_step_func( next->r, next->c );
+    while ( next != NULL ) {
+        if ( !out_of_maze( map, next->r, next->c ) ) {
+            on_step_func( next->r, next->c );
+        }
 
         Path *prev = next;
         next = next->next;

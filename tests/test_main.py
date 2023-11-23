@@ -299,14 +299,38 @@ class TestRun:
         assert result.code == 0, result.stderr
         assert result.stdout == self.RPATH_OUTPUT
 
+    def test_run_right_memory_leaks(self):
+        result = run_command(
+            "valgrind --tool=memcheck --leak-check=yes --error-exitcode=1"
+            + " ./bin/maze --rpath 6 1 tests/mazes/sample_maze.txt"
+        )
+
+        assert result.code == 0, result.stderr
+
     def test_run_left_path(self):
         result = run_program("--lpath 6 1 tests/mazes/sample_maze.txt")
 
         assert result.code == 0, result.stderr
         assert result.stdout == self.LPATH_OUTPUT
 
+    def test_run_left_memory_leaks(self):
+        result = run_command(
+            "valgrind --tool=memcheck --leak-check=yes --error-exitcode=1"
+            + " ./bin/maze --lpath 6 1 tests/mazes/sample_maze.txt"
+        )
+
+        assert result.code == 0, result.stderr
+
     def test_run_shortest(self):
         result = run_program("--shortest 6 1 tests/mazes/sample_maze.txt")
 
         assert result.code == 0, result.stderr
         assert result.stdout == self.SHORTEST_OUTPUT
+
+    def test_run_shortest_memory_leaks(self):
+        result = run_command(
+            "valgrind --tool=memcheck --leak-check=yes --error-exitcode=1"
+            + " ./bin/maze --shortest 6 1 tests/mazes/sample_maze.txt"
+        )
+
+        assert result.code == 0, result.stderr
