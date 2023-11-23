@@ -152,6 +152,7 @@ int read_map_cells( Map *map, FILE *file ) {
             return -1;
         }
     }
+    // TODO check if all rows & columns were read
     return 0;
 }
 
@@ -374,6 +375,11 @@ void log_weights( Map *m, int *weights ) {
 }
 
 bool run_iteration( Map *map, Path *from, int *weights ) {
+    // TODO do not add path with cell location outside of the maze
+
+    // TODO forbid finding an exit by just turning around. Probably include the
+    // direction where iteration came from
+
     bool moves_out_of_maze = out_of_maze( map, from->r, from->c );
     if ( moves_out_of_maze )
         return true;
