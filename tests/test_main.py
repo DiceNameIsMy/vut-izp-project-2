@@ -173,6 +173,13 @@ class TestMazeTesting:
         assert result.stdout == "Invalid\n"
         assert result.debugless_stderr() == ""
 
+    def test_missing_row(self):
+        result = run_program("--test tests/mazes/missing_row.txt")
+
+        assert result.code == 0
+        assert result.stdout == "Invalid\n"
+        assert result.debugless_stderr() == ""
+
     def test_invalid_cell(self):
         result = run_program("--test tests/mazes/invalid_cell.txt")
 
@@ -292,6 +299,16 @@ class TestRun:
 2,7
 3,7
 """
+    SHORTEST_2_OUTPUT = """3,7
+2,7
+2,6
+2,5
+2,4
+1,4
+1,3
+1,2
+1,1
+"""
 
     def test_run_right_path(self):
         result = run_program("--rpath 6 1 tests/mazes/sample_maze.txt")
@@ -326,6 +343,12 @@ class TestRun:
 
         assert result.code == 0, result.stderr
         assert result.stdout == self.SHORTEST_OUTPUT
+
+    def test_run_second_shortest(self):
+        result = run_program("--shortest 3 7 tests/mazes/sample_maze.txt")
+
+        assert result.code == 0, result.stderr
+        assert result.stdout == self.SHORTEST_2_OUTPUT
 
     def test_run_shortest_memory_leaks(self):
         result = run_command(
