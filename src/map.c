@@ -357,10 +357,11 @@ void log_weights( Map *m, int *weights ) {
 }
 
 bool run_iteration( Map *map, Path *from, int *weights ) {
-    // TODO do not add path with cell location outside of the maze
-
-    // TODO forbid finding an exit by just turning around. Probably include the
-    // direction where iteration came from
+    // TODO implement Dijkstra's algorithm to find the shortest path:
+    // 1. find all exits
+    // 2. for each exit,
+    //      - find the shortest path
+    // 3. return the shortest path of all
 
     bool moves_out_of_maze = out_of_maze( map, from->r, from->c );
     if ( moves_out_of_maze )
