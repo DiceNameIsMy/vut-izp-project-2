@@ -143,16 +143,8 @@ int read_map_cells( Map *map, FILE *file ) {
     char c;
     while ( ( c = fgetc( file ) ) != EOF ) {
         ProcessCharResult r = process_char( map, c, &row, &column );
-
-        if ( r == BAD_MAP ) {
-            loginfo( "tried moving to a next row %i->%i but not all columns "
-                     "were set (%i out of %i)",
-                     row, row + 1, column - 1, map->cols );
+        if ( r == BAD_MAP || r == BAD_CELL )
             return -1;
-        } else if ( r == BAD_CELL ) {
-            loginfo( "encountered char `%c` which is not a valid number", c );
-            return -1;
-        }
     }
     bool all_rows_processed = row == ( map->rows + 1 );
     if ( !all_rows_processed ) {
@@ -166,44 +158,30 @@ bool has_right_border( int cell ) { return ( cell & 0b010 ) == 0b010; }
 bool has_updown_border( int cell ) { return ( cell & 0b100 ) == 0b100; }
 
 bool check_right_border( Map *map, int cell, int r, int c ) {
-    if ( moves_out_of_maze( map, r, c, RIGHT ) ) {
-        loginfo( "went out of bounds at %ix%i", r, c + 1 );
+    if ( moves_out_of_maze( map, r, c, RIGHT ) )
         return true;
-    }
+
     int right_cell = get_cell( map, r, c + 1 );
 
-    loginfo( "comparing cell %i at %ix%i with cell on right %i at %ix%i", cell,
-             r, c, right_cell, r, c + 1 );
-
-    if ( has_right_border( cell ) ^ has_left_border( right_cell ) ) {
-        loginfo( "map cell at %ix%i with value `%i` is in a mismatch with its "
-                 "right cell `%i`",
-                 r, c, cell, right_cell );
+    bool mismatch = has_right_border( cell ) ^ has_left_border( right_cell );
+    if ( mismatch )
         return false;
-    }
+
     return true;
 }
 
 bool check_down_border( Map *map, int cell, int r, int c ) {
-    bool cell_goes_up = has_passage_above( r, c );
-    if ( cell_goes_up )
+    if ( has_passage_above( r, c ) )
         return true;
 
-    if ( moves_out_of_maze( map, r, c, DOWN ) ) {
-        loginfo( "went out of bounds at %ix%i", r + 1, c );
+    if ( moves_out_of_maze( map, r, c, DOWN ) )
         return true;
-    }
+
     int cell_below = get_cell( map, r + 1, c );
 
-    loginfo( "comparing cell %i at %ix%i with cell below %i at %ix%i", cell, r,
-             c, cell_below, r + 1, c );
-
-    if ( has_updown_border( cell ) ^ has_updown_border( cell_below ) ) {
-        loginfo( "cell at %ix%i with value `%i` is in a mismatch with a cell "
-                 "beneath it with value `%i`",
-                 r, c, cell, cell_below );
+    bool mismatch = has_updown_border( cell ) ^ has_updown_border( cell_below );
+    if ( mismatch )
         return false;
-    }
 
     return true;
 }
@@ -222,10 +200,9 @@ bool check_cell_valid( Map *map, int r, int c ) {
 bool is_map_valid( Map *map ) {
     for ( int r = 1; r <= map->rows; r++ ) {
         for ( int c = 1; c <= map->cols; c++ ) {
-            if ( !check_cell_valid( map, r, c ) ) {
-                loginfo( "map cell %ix%i is invalid", r, c );
+            bool cell_valid = check_cell_valid( map, r, c );
+            if ( !cell_valid )
                 return false;
-            }
         }
     }
     return true;
