@@ -27,12 +27,13 @@ char *border_str[ BORDER_COUNT ] = {
     [DOWN] = "DOWN",
 };
 
-int to_cell( char c ) {
-    bool is_valid_cell = c >= '0' && c <= '7';
-    if ( !is_valid_cell )
+int to_cell( char ch, int *cell ) {
+    bool valid = ch >= '0' && ch <= '7';
+    if ( !valid )
         return -1;
 
-    return c - '0';
+    *cell = ch - '0';
+    return 1;
 }
 
 int get_cell_idx( Map *map, int r, int c ) {
@@ -105,9 +106,10 @@ ProcessCharResult process_char( Map *map, char ch, int *row_ptr,
                                 int *col_ptr ) {
     if ( ch == ' ' ) {
         return OK;
-    } else if ( ch == '\n' ) {
-        bool all_columns_set = ( *col_ptr - 1 ) == map->cols;
-        if ( !all_columns_set )
+    }
+    if ( ch == '\n' ) {
+        bool all_row_columns_set = ( *col_ptr - 1 ) == map->cols;
+        if ( !all_row_columns_set )
             return BAD_MAP;
 
         loginfo( "moving to the next line(row) %i->%i", *row_ptr,
@@ -119,15 +121,15 @@ ProcessCharResult process_char( Map *map, char ch, int *row_ptr,
         return OK;
     }
 
-    int cell = to_cell( ch );
-    if ( cell == -1 ) {
+    int cell;
+    if ( to_cell( ch, &cell ) == -1 )
         return BAD_CELL;
-    }
 
     int cell_idx = get_cell_idx( map, *row_ptr, *col_ptr );
 
     loginfo( "adding cell: %i at %ix%i with idx %i", cell, *row_ptr, *col_ptr,
              cell_idx );
+
     map->cells[ cell_idx ] = cell;
     ( *col_ptr )++;
 
@@ -152,7 +154,10 @@ int read_map_cells( Map *map, FILE *file ) {
             return -1;
         }
     }
-    // TODO check if all rows & columns were read
+    bool all_rows_processed = row == ( map->rows + 1 );
+    if ( !all_rows_processed ) {
+        return -1;
+    }
     return 0;
 }
 
