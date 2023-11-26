@@ -336,7 +336,6 @@ class TestRun:
         assert result.code == 0, result.stderr
         assert result.stdout == ""
 
-    @pytest.mark.skip
     def test_run_left_memory_leaks(self):
         result = run_command(
             "valgrind --tool=memcheck --leak-check=yes --error-exitcode=1"
