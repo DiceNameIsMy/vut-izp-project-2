@@ -21,8 +21,6 @@ Should we validate that entering cell has an entrance?
 #define loginfo( s, ... )
 #endif
 
-typedef enum strategy { RIGHT_HAND = 0, LEFT_HAND = 1, SHORTEST = 2 } Strategy;
-
 typedef enum border { RIGHT, LEFT, UP, DOWN, BORDER_COUNT } Border;
 
 /*
@@ -35,11 +33,6 @@ char *border_str[ BORDER_COUNT ] = {
     [DOWN] = "DOWN",
 };
 
-typedef struct position {
-    int row;
-    int column;
-} Position;
-
 /* ## Represents a map of the maze.
 
 cells - each char represents a cell with 3 passages in the maze.
@@ -50,8 +43,8 @@ specifies the absence of a border on the passage, and 1 its presence.
 
 First bit (0b001) -> border on the left
 Second bit (0b010) -> border on the right
-Third bit (0b10) -> border above or below depending on the sum of the
-coordinates:
+Third bit (0b10) -> border is at the passage above or below. It depends on the
+sum of the coordinates:
     - odd (1 + 2): passage is above
     - even (1 + 1): passage is below
 */
@@ -61,24 +54,24 @@ typedef struct map {
     unsigned char *cells;
 } Map;
 
-Map *load_map( FILE *file );
+/*
+Returns whether there is a border at the given passage. The parameter with name
+`int border` does not make much sense in this implementation. Unfortunately,
+there is a specific requirement to have it defined like this.
 
-void destruct_map( Map *map );
-
-bool isborder( Map *map, int r, int c, Border border );
+`int border` represents a direction where to perform the check.
+*/
+bool isborder( Map *map, int r, int c, int border );
 
 /*
-Get the border to start crossing on the first step
-*/
-Border start_border( Map *map, int r, int c, int leftright );
+Get the border to start crossing on the first step.
 
-/*
-Function to invoke on each step taken to get out of the maze
-*/
-typedef void ( *on_step_func_t )( int r, int c );
+`int leftright` represents the strategy of how to "solve" the maze. See enum
+`Strategy` for more context.
 
-void solve_maze( Map *map, int r, int c, Strategy strategy,
-                 on_step_func_t on_step_func );
+Output: `int` represents a Border where to move on the next step.
+*/
+int start_border( Map *map, int r, int c, int leftright );
 
 /*
 
@@ -310,7 +303,7 @@ STARTING POINT RESOLVEMENT
 
 */
 
-bool isborder( Map *map, int r, int c, Border border ) {
+bool isborder( Map *map, int r, int c, int border ) {
     int cell = get_cell( map, r, c );
 
     if ( border == LEFT )
@@ -329,6 +322,8 @@ bool isborder( Map *map, int r, int c, Border border ) {
              border );
     return true;
 }
+
+typedef enum strategy { RIGHT_HAND = 0, LEFT_HAND = 1, SHORTEST = 2 } Strategy;
 
 /* Resolve to what passage to look at next
 - first accessor is a strategy: LEFT_HAND / RIGHT_HAND
@@ -375,7 +370,7 @@ Border entered_maze_from( Map *map, int r, int c ) {
     return -1;
 }
 
-Border start_border( Map *map, int r, int c, int leftright ) {
+int start_border( Map *map, int r, int c, int leftright ) {
     if ( leftright == SHORTEST ) {
         loginfo( "invalid leftright value %i", leftright );
         return -1;
@@ -404,6 +399,11 @@ bool has_help_flag( int argc, char *argv[] );
 int try_test_maze( char *option, char *filename );
 
 int try_solve_maze( char *option, char *row, char *column, char *filename );
+
+/*
+Function to invoke on each step taken to get out of the maze
+*/
+typedef void ( *on_step_func_t )( int r, int c );
 
 void solve_maze( Map *map, int r, int c, Strategy strategy,
                  on_step_func_t on_step_func );
@@ -501,8 +501,8 @@ int parse_positive_int( char *str ) {
     return *p_str == '\0' ? val : -1;
 }
 
-int set_starting_position( char *str_row, char *str_column,
-                           Position *position ) {
+int set_starting_position( char *str_row, char *str_column, int *p_row,
+                           int *p_col ) {
     int row = parse_positive_int( str_row );
     if ( row == -1 ) {
         fprintf( stderr, INVALID_ARGS_ERROR, str_row );
@@ -514,8 +514,8 @@ int set_starting_position( char *str_row, char *str_column,
         return -1;
     }
 
-    position->row = row;
-    position->column = column;
+    *p_row = row;
+    *p_col = column;
     return 0;
 }
 
@@ -528,8 +528,9 @@ int try_solve_maze( char *option, char *row, char *column, char *filename ) {
         return 1;
     }
 
-    Position start_at;
-    if ( set_starting_position( row, column, &start_at ) == -1 ) {
+    int start_row;
+    int start_col;
+    if ( set_starting_position( row, column, &start_row, &start_col ) == -1 ) {
         return 1;
     }
 
@@ -544,7 +545,7 @@ int try_solve_maze( char *option, char *row, char *column, char *filename ) {
     if ( map == NULL ) {
         return 1;
     }
-    solve_maze( map, start_at.row, start_at.column, strategy, print_location );
+    solve_maze( map, start_row, start_col, strategy, print_location );
 
     destruct_map( map );
     return 0;
