@@ -396,7 +396,7 @@ int start_border( Map *map, int r, int c, int leftright ) {
 
 /*
 
-MAZE SOLVER ENTRYPOINT
+MAZE SOLVING SECTIONS
 ---------------------------------------------------------------------
 
 */
@@ -406,13 +406,152 @@ Function to invoke on each step taken to get out of the maze
 */
 typedef void ( *on_step_func_t )( int r, int c );
 
-void solve_maze( Map *map, int r, int c, Strategy strategy,
-                 on_step_func_t on_step_func ) {
-    if ( strategy == SHORTEST ) {
+/*
+
+SHORTEST STRATEGY ALGORITHM
+---------------------------------------------------------------------
+
+*/
+
+typedef struct {
+    int row;
+    int column;
+} Position;
+
+typedef struct {
+    int amount;
+    Position *exits;
+} AllExits;
+
+AllExits *init_all_exits() {
+    AllExits *all_exits = malloc( sizeof( AllExits ) );
+    if ( all_exits == NULL )
+        return NULL;
+
+    all_exits->amount = 0;
+    all_exits->exits = NULL;
+    return all_exits;
+}
+
+int add_exit( AllExits *exits, int r, int c ) {
+    exits->amount++;
+    if ( exits->amount == 0 ) {
+        exits->exits = malloc( sizeof( Position ) );
+    } else {
+        exits->exits =
+            realloc( exits->exits, sizeof( Position ) * exits->amount );
+    }
+
+    if ( exits->exits == NULL )
+        return -1;
+
+    Position p = { .row = r, .column = c };
+    exits->exits[ exits->amount - 1 ] = p;
+
+    return 0;
+}
+
+void destruct_all_exits( AllExits *exits ) {
+    free( exits->exits );
+    free( exits );
+}
+
+int load_all_exits( Map *map, int r, int c, AllExits *exits ) {
+    for ( int row = 1; row <= map->rows; row++ ) {
+        // for each leftmost cell
+        if ( row == r && c == 1 )
+            continue;
+
+        bool has_exit_on_left = !has_left_border( get_cell( map, row, 1 ) );
+        if ( has_exit_on_left ) {
+            if ( add_exit( exits, row, 1 ) == -1 ) {
+                destruct_all_exits( exits );
+                return -1;
+            }
+        }
+
+        // for each rightmost cell
+        if ( row == r && c == map->cols )
+            continue;
+
+        bool has_exit_on_right =
+            !has_right_border( get_cell( map, row, map->cols ) );
+        if ( has_exit_on_right ) {
+            if ( add_exit( exits, row, map->cols ) == -1 ) {
+                destruct_all_exits( exits );
+                return -1;
+            }
+        }
+    }
+
+    for ( int col = 1; col <= map->cols; col++ ) {
+        // for each uppermost cell
+        if ( col == c && r == 1 )
+            continue;
+
+        bool has_exit_above = has_passage_above( 1, col ) &&
+                              !has_updown_border( get_cell( map, 1, col ) );
+        if ( has_exit_above ) {
+            if ( add_exit( exits, 1, col ) == -1 ) {
+                destruct_all_exits( exits );
+                return -1;
+            }
+        }
+
+        // for each cell on the bottom
+        if ( col == c && r == map->rows )
+            continue;
+
+        bool has_exit_below =
+            !has_passage_above( map->rows, col ) &&
+            !has_updown_border( get_cell( map, map->rows, col ) );
+        if ( has_exit_below ) {
+            if ( add_exit( exits, map->rows, col ) == -1 ) {
+                destruct_all_exits( exits );
+                return -1;
+            }
+        }
+    }
+
+    return 0;
+}
+
+void solve_shortest( Map *map, int r, int c ) {
+    AllExits *exits = init_all_exits();
+    if ( load_all_exits( map, r, c, exits ) == -1 ) {
+        // TODO: log teh problem
+        destruct_all_exits( exits );
+    }
+
+    if ( exits->amount == 0 ) {
+        // TODO: log the problem
         return;
     }
 
-    Border direction = start_border( map, r, c, strategy );
+    // TODO for each exit, find the shortest path using the dijkstra algorithm
+    // if the next path is shorter that the last one, free the last one and
+    // store the new one
+
+    for ( int i = 0; i < exits->amount; i++ ) {
+        Position p = exits->exits[ i ];
+        loginfo( "found exit at %ix%i", p.row, p.column );
+    }
+
+    destruct_all_exits( exits );
+
+    // act on the shortest path
+}
+
+/*
+
+MAZE SOLVER ENTRYPOINT
+---------------------------------------------------------------------
+
+*/
+
+void solve_leftright( Map *map, int r, int c, int leftright,
+                      on_step_func_t on_step_func ) {
+    Border direction = start_border( map, r, c, leftright );
     if ( (int)direction == -1 ) {
         loginfo( "failed to get the starting border with entering points %ix%i",
                  r, c );
@@ -434,9 +573,19 @@ void solve_maze( Map *map, int r, int c, Strategy strategy,
         }
 
         Border came_from = reverse_direction[ direction ];
-        direction = resolve_direction( map, r, c, strategy, came_from );
+        direction = resolve_direction( map, r, c, leftright, came_from );
         steps++;
     }
+}
+
+void solve_maze( Map *map, int r, int c, Strategy strategy,
+                 on_step_func_t on_step_func ) {
+    if ( strategy == SHORTEST ) {
+        solve_shortest( map, r, c );
+        return;
+    }
+
+    solve_leftright( map, r, c, strategy, on_step_func );
 }
 
 /*
