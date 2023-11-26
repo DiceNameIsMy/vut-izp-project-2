@@ -396,6 +396,51 @@ int start_border( Map *map, int r, int c, int leftright ) {
 
 /*
 
+MAZE SOLVER ENTRYPOINT
+---------------------------------------------------------------------
+
+*/
+
+/*
+Function to invoke on each step taken to get out of the maze
+*/
+typedef void ( *on_step_func_t )( int r, int c );
+
+void solve_maze( Map *map, int r, int c, Strategy strategy,
+                 on_step_func_t on_step_func ) {
+    if ( strategy == SHORTEST ) {
+        return;
+    }
+
+    Border direction = start_border( map, r, c, strategy );
+    if ( (int)direction == -1 ) {
+        loginfo( "failed to get the starting border with entering points %ix%i",
+                 r, c );
+        return;
+    }
+    loginfo( "starting direction is %s", border_str[ direction ] );
+
+    int steps = 0;
+    while ( true ) {
+        // Act
+        on_step_func( r, c );
+
+        // Move
+        r = move_r( r, direction );
+        c = move_c( c, direction );
+        if ( out_of_maze( map, r, c ) ) {
+            loginfo( "exit from maze was found in %i steps", steps );
+            return;
+        }
+
+        Border came_from = reverse_direction[ direction ];
+        direction = resolve_direction( map, r, c, strategy, came_from );
+        steps++;
+    }
+}
+
+/*
+
 COMMAND LINE INTERFACE (CLI)
 ---------------------------------------------------------------------
 
@@ -406,14 +451,6 @@ bool has_help_flag( int argc, char *argv[] );
 int try_test_maze( char *option, char *filename );
 
 int try_solve_maze( char *option, char *row, char *column, char *filename );
-
-/*
-Function to invoke on each step taken to get out of the maze
-*/
-typedef void ( *on_step_func_t )( int r, int c );
-
-void solve_maze( Map *map, int r, int c, Strategy strategy,
-                 on_step_func_t on_step_func );
 
 static const char HELP_TEXT[] =
     ""
@@ -533,39 +570,6 @@ int try_solve_maze( char *option, char *row, char *column, char *filename ) {
 
     destruct_map( map );
     return 0;
-}
-
-void solve_maze( Map *map, int r, int c, Strategy strategy,
-                 on_step_func_t on_step_func ) {
-    if ( strategy == SHORTEST ) {
-        return;
-    }
-
-    Border direction = start_border( map, r, c, strategy );
-    if ( (int)direction == -1 ) {
-        loginfo( "failed to get the starting border with entering points %ix%i",
-                 r, c );
-        return;
-    }
-    loginfo( "starting direction is %s", border_str[ direction ] );
-
-    int steps = 0;
-    while ( true ) {
-        // Act
-        on_step_func( r, c );
-
-        // Move
-        r = move_r( r, direction );
-        c = move_c( c, direction );
-        if ( out_of_maze( map, r, c ) ) {
-            loginfo( "exit from maze was found in %i steps", steps );
-            return;
-        }
-
-        Border came_from = reverse_direction[ direction ];
-        direction = resolve_direction( map, r, c, strategy, came_from );
-        steps++;
-    }
 }
 
 int main( int argc, char *argv[] ) {
