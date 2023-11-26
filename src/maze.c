@@ -106,24 +106,22 @@ bool out_of_maze( Map *m, int r, int c ) {
     return ( r < 1 || r > m->rows || c < 1 || c > m->cols );
 }
 
-/* Mapping of how does row and column change when moving to some direction.
-First idx represents Border enum.
-Second idx represents row(0) and column(1).
-*/
-int move_incr[ BORDER_COUNT ][ 2 ] = {
-    [RIGHT] = { 0, 1 },
-    [LEFT] = { 0, -1 },
-    [UP] = { -1, 0 },
-    [DOWN] = { 1, 0 },
+int row_incr[ BORDER_COUNT ] = {
+    [RIGHT] = 0,
+    [LEFT] = 0,
+    [UP] = -1,
+    [DOWN] = 1,
+};
+int col_incr[ BORDER_COUNT ] = {
+    [RIGHT] = 1,
+    [LEFT] = -1,
+    [UP] = 0,
+    [DOWN] = 0,
 };
 
-int move_r( int r, Border direction ) {
-    return r + move_incr[ direction ][ 0 ];
-}
+int move_r( int r, Border direction ) { return r + row_incr[ direction ]; }
 
-int move_c( int c, Border direction ) {
-    return c + move_incr[ direction ][ 1 ];
-}
+int move_c( int c, Border direction ) { return c + col_incr[ direction ]; }
 
 bool moves_out_of_maze( Map *m, int r, int c, Border direction ) {
     int moved_r = move_r( r, direction );
