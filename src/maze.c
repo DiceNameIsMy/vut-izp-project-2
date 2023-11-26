@@ -33,7 +33,14 @@ char *border_str[ BORDER_COUNT ] = {
     [DOWN] = "DOWN",
 };
 
-/* ## Represents a map of the maze.
+/*
+
+DEFINITONS REQUIRED TO BE DEFINED
+---------------------------------------------------------------------
+
+*/
+
+/* Represents a map of the maze.
 
 cells - each char represents a cell with 3 passages in the maze.
 
@@ -389,7 +396,7 @@ int start_border( Map *map, int r, int c, int leftright ) {
 
 /*
 
-Command Line Interface (CLI)
+COMMAND LINE INTERFACE (CLI)
 ---------------------------------------------------------------------
 
 */
@@ -425,29 +432,6 @@ static const char INVALID_ARGS_AMOUNT_ERROR[] =
     "Invalid amount of arguments. Try `maze --help` for more information.\n";
 static const char UNKNOWN_STRATEGY_ERROR[] =
     "Unknown strategy `%s`. Try `maze --help` for more information.\n";
-
-int main( int argc, char *argv[] ) {
-    bool show_help = has_help_flag( argc, argv ) || ( argc == 1 );
-    if ( show_help ) {
-        printf( HELP_TEXT );
-        return 0;
-    }
-
-    if ( argc == 3 ) {
-        char *flag = argv[ 1 ];
-        char *maze_filename = argv[ 2 ];
-        return try_test_maze( flag, maze_filename );
-    } else if ( argc == 5 ) {
-        char *flag = argv[ 1 ];
-        char *row_str = argv[ 2 ];
-        char *column_str = argv[ 3 ];
-        char *maze_filename = argv[ 4 ];
-        return try_solve_maze( flag, row_str, column_str, maze_filename );
-    }
-
-    fprintf( stderr, INVALID_ARGS_AMOUNT_ERROR );
-    return 1;
-}
 
 bool has_help_flag( int argc, char *argv[] ) {
     for ( int i = 0; i < argc; i++ ) {
@@ -495,7 +479,7 @@ Strategy get_strategy( char *option ) {
     return -1;
 }
 
-int parse_positive_int( char *str ) {
+int to_positive_int( char *str ) {
     char *p_str;
     int val = strtol( str, &p_str, 10 );
     return *p_str == '\0' ? val : -1;
@@ -503,12 +487,12 @@ int parse_positive_int( char *str ) {
 
 int set_starting_position( char *str_row, char *str_column, int *p_row,
                            int *p_col ) {
-    int row = parse_positive_int( str_row );
+    int row = to_positive_int( str_row );
     if ( row == -1 ) {
         fprintf( stderr, INVALID_ARGS_ERROR, str_row );
         return -1;
     }
-    int column = parse_positive_int( str_column );
+    int column = to_positive_int( str_column );
     if ( column == -1 ) {
         fprintf( stderr, INVALID_ARGS_ERROR, str_column );
         return -1;
@@ -582,4 +566,27 @@ void solve_maze( Map *map, int r, int c, Strategy strategy,
         direction = resolve_direction( map, r, c, strategy, came_from );
         steps++;
     }
+}
+
+int main( int argc, char *argv[] ) {
+    bool show_help = has_help_flag( argc, argv ) || ( argc == 1 );
+    if ( show_help ) {
+        printf( HELP_TEXT );
+        return 0;
+    }
+
+    if ( argc == 3 ) {
+        char *flag = argv[ 1 ];
+        char *maze_filename = argv[ 2 ];
+        return try_test_maze( flag, maze_filename );
+    } else if ( argc == 5 ) {
+        char *flag = argv[ 1 ];
+        char *row_str = argv[ 2 ];
+        char *column_str = argv[ 3 ];
+        char *maze_filename = argv[ 4 ];
+        return try_solve_maze( flag, row_str, column_str, maze_filename );
+    }
+
+    fprintf( stderr, INVALID_ARGS_AMOUNT_ERROR );
+    return 1;
 }
