@@ -484,6 +484,12 @@ void destruct_all_exits( AllExits *exits ) {
     free( exits );
 }
 
+/*
+Load all cell locations that contain an open passage out of the maze
+
+Might find 2 positions with the same coordinates when there are 2 open passages
+out of the maze
+*/
 int load_all_exits( Map *map, int r, int c, AllExits *exits ) {
     for ( int row = 1; row <= map->rows; row++ ) {
         // for each leftmost cell
