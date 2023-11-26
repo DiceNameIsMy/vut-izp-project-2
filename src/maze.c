@@ -406,6 +406,34 @@ Function to invoke on each step taken to get out of the maze
 */
 typedef void ( *on_step_func_t )( int r, int c );
 
+void solve_leftright( Map *map, int r, int c, int leftright,
+                      on_step_func_t on_step_func ) {
+    Border direction = start_border( map, r, c, leftright );
+    if ( (int)direction == -1 ) {
+        loginfo( "failed to get the starting border with entering points %ix%i",
+                 r, c );
+        return;
+    }
+    loginfo( "starting direction is %s", border_str[ direction ] );
+
+    int steps = 0;
+    while ( true ) {
+        // Act
+        on_step_func( r, c );
+
+        // Move
+        r = move_r( r, direction );
+        c = move_c( c, direction );
+        if ( out_of_maze( map, r, c ) ) {
+            loginfo( "exit from maze was found in %i steps", steps );
+            return;
+        }
+
+        Border came_from = reverse_direction[ direction ];
+        direction = resolve_direction( map, r, c, leftright, came_from );
+        steps++;
+    }
+}
 /*
 
 SHORTEST STRATEGY ALGORITHM
@@ -548,35 +576,6 @@ MAZE SOLVER ENTRYPOINT
 ---------------------------------------------------------------------
 
 */
-
-void solve_leftright( Map *map, int r, int c, int leftright,
-                      on_step_func_t on_step_func ) {
-    Border direction = start_border( map, r, c, leftright );
-    if ( (int)direction == -1 ) {
-        loginfo( "failed to get the starting border with entering points %ix%i",
-                 r, c );
-        return;
-    }
-    loginfo( "starting direction is %s", border_str[ direction ] );
-
-    int steps = 0;
-    while ( true ) {
-        // Act
-        on_step_func( r, c );
-
-        // Move
-        r = move_r( r, direction );
-        c = move_c( c, direction );
-        if ( out_of_maze( map, r, c ) ) {
-            loginfo( "exit from maze was found in %i steps", steps );
-            return;
-        }
-
-        Border came_from = reverse_direction[ direction ];
-        direction = resolve_direction( map, r, c, leftright, came_from );
-        steps++;
-    }
-}
 
 void solve_maze( Map *map, int r, int c, Strategy strategy,
                  on_step_func_t on_step_func ) {
