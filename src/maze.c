@@ -562,15 +562,15 @@ typedef struct {
     int distance;
 } Vertex;
 
-void init_distances( Vertex *distances, Map *map, Position end ) {
+void init_distances( Vertex *distances, Map *map, Position start ) {
     int amount_of_vertices = map->rows * map->cols;
     for ( int i = 0; i < amount_of_vertices; i++ ) {
         Vertex v = { .processed = false, .distance = INFINITY };
         distances[ i ] = v;
     }
 
-    int end_idx = get_cell_idx( map, end.row, end.column );
-    distances[ end_idx ].distance = 0;
+    int start_idx = get_cell_idx( map, start.row, start.column );
+    distances[ start_idx ].distance = 0;
 }
 
 Position get_lowest_vertex_position( Map *map, Vertex *distances ) {
@@ -635,17 +635,18 @@ void process_edge( Map *map, Vertex *distances, Position from,
     }
 }
 
-int *find_shortest_path( Map *map, Position start, Position end,
-                         Vertex *distances ) {
+int find_shortest_path( Map *map, Position start, Position end,
+                        Vertex *distances ) {
     while ( true ) {
         Position p = get_lowest_vertex_position( map, distances );
 
         if ( p.row == -1 && p.column == -1 ) {
-            loginfo( "failed to find a way to exit at %ix%i (not sure)",
-                     end.row, end.column );
-            return 0;
+            loginfo( "failed to find a way to exit a maze by starting at %ix%i "
+                     "(not sure)",
+                     start.row, start.column );
+            return -1;
         }
-        if ( p.row == start.row && p.column == start.column ) {
+        if ( p.row == end.row && p.column == end.column ) {
             loginfo( "vertex with lowest value at %ix%i is the end", p.row,
                      p.column );
             return 0;
@@ -692,7 +693,7 @@ void solve_shortest( Map *map, int r, int c ) {
 
     for ( int i = 0; i < exits->amount; i++ ) {
         Position *end = &exits->exits[ i ];
-        loginfo( "found exit at %ix%i", end->row, end->column );
+        loginfo( "found cell with exit at %ix%i", end->row, end->column );
 
         int amount_of_vertices = map->rows * map->cols;
         Vertex *distances = malloc( sizeof( Vertex ) * amount_of_vertices );
@@ -701,7 +702,7 @@ void solve_shortest( Map *map, int r, int c ) {
             return;
         }
 
-        init_distances( distances, map, *end );
+        init_distances( distances, map, start );
 
         find_shortest_path( map, start, *end, distances );
 
@@ -734,6 +735,7 @@ void solve_shortest( Map *map, int r, int c ) {
             int idx =
                 get_cell_idx( map, shortest_exit->row, shortest_exit->column );
             shortest_vertex = &shortest_distances[ idx ];
+            continue;
         }
 
         free( distances );
