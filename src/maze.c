@@ -14,6 +14,9 @@ Should we validate that entering cell has an entrance?
 #include <stdlib.h>
 #include <string.h>
 
+// For Dijkstra's algorithm
+#define INFINITY -1
+
 #ifndef NDEBUG
 #define loginfo( s, ... ) \
     fprintf( stderr, "[INF]" __FILE__ ":%u: " s "\n", __LINE__, __VA_ARGS__ )
@@ -284,7 +287,7 @@ Map *load_map( FILE *file ) {
     }
     loginfo( "map size is %ix%i", map->rows, map->cols );
 
-    map->cells = malloc( map->rows * map->cols );
+    map->cells = malloc( sizeof( unsigned char ) * map->rows * map->cols );
     if ( map->cells == NULL ) {
         free( map );
         return NULL;
@@ -365,6 +368,10 @@ Border resolve_direction( Map *m, int r, int c, Strategy leftright,
 }
 
 Border entered_maze_from( Map *map, int r, int c ) {
+    if ( r < 1 || r > map->rows || c < 1 || c > map->cols ) {
+        return -1;
+    }
+
     if ( c == 1 )
         return LEFT;
     else if ( c == map->cols )
@@ -550,7 +557,122 @@ int load_all_exits( Map *map, int r, int c, AllExits *exits ) {
     return 0;
 }
 
+typedef struct {
+    bool processed;
+    int distance;
+} Vertex;
+
+void init_distances( Vertex *distances, Map *map, Position end ) {
+    int amount_of_vertices = map->rows * map->cols;
+    for ( int i = 0; i < amount_of_vertices; i++ ) {
+        Vertex v = { .processed = false, .distance = INFINITY };
+        distances[ i ] = v;
+    }
+
+    int end_idx = get_cell_idx( map, end.row, end.column );
+    distances[ end_idx ].distance = 0;
+}
+
+Position get_lowest_vertex_position( Map *map, Vertex *distances ) {
+    Position p = { .row = -1, .column = -1 };
+    Vertex *v = NULL;
+
+    for ( int r = 1; r <= map->rows; r++ ) {
+        for ( int c = 1; c <= map->cols; c++ ) {
+            int next_idx = get_cell_idx( map, r, c );
+            Vertex *next_vertex = &distances[ next_idx ];
+            if ( next_vertex->processed || next_vertex->distance == INFINITY )
+                continue;
+
+            if ( v == NULL || v->distance == INFINITY ||
+                 v->distance > next_vertex->distance ) {
+                p.row = r;
+                p.column = c;
+                v = next_vertex;
+            }
+        }
+    }
+
+    return p;
+}
+
+void process_edge( Map *map, Vertex *distances, Position from,
+                   Border direction ) {
+    loginfo( "processing a vertex %ix%i moving %s", from.row, from.column,
+             border_str[ direction ] );
+    if ( direction == UP && !has_passage_above( from.row, from.column ) ) {
+        return;
+    }
+    if ( direction == DOWN && has_passage_above( from.row, from.column ) ) {
+        return;
+    }
+
+    if ( isborder( map, from.row, from.column, direction ) ) {
+        loginfo( "can not move %s because of a border",
+                 border_str[ direction ] );
+        return;
+    }
+
+    if ( moves_out_of_maze( map, from.row, from.column, direction ) ) {
+        loginfo( "can not move %s because of moving out if the maze",
+                 border_str[ direction ] );
+        return;
+    }
+
+    Vertex *v_from = &distances[ get_cell_idx( map, from.row, from.column ) ];
+
+    Position pos_to = { .row = move_r( from.row, direction ),
+                        .column = move_c( from.column, direction ) };
+    Vertex *v_to = &distances[ get_cell_idx( map, pos_to.row, pos_to.column ) ];
+
+    bool is_unset = v_to->distance == INFINITY;
+    bool new_path_is_shorter = v_to->distance > ( v_from->distance + 1 );
+
+    if ( is_unset || new_path_is_shorter ) {
+        v_to->distance = v_from->distance + 1;
+        loginfo( "set %ix%i to a distance of %i", pos_to.row, pos_to.column,
+                 v_to->distance );
+    }
+}
+
+int *find_shortest_path( Map *map, Position start, Position end,
+                         Vertex *distances ) {
+    while ( true ) {
+        Position p = get_lowest_vertex_position( map, distances );
+
+        if ( p.row == -1 && p.column == -1 ) {
+            loginfo( "failed to find a way to exit at %ix%i (not sure)",
+                     end.row, end.column );
+            return 0;
+        }
+        if ( p.row == start.row && p.column == start.column ) {
+            loginfo( "vertex with lowest value at %ix%i is the end", p.row,
+                     p.column );
+            return 0;
+        }
+
+        Vertex *v = &distances[ get_cell_idx( map, p.row, p.column ) ];
+
+        loginfo( "next vertex: %ix%i distance from origin: %i", p.row, p.column,
+                 v->distance );
+
+        process_edge( map, distances, p, LEFT );
+        process_edge( map, distances, p, RIGHT );
+        process_edge( map, distances, p, UP );
+        process_edge( map, distances, p, DOWN );
+
+        v->processed = true;
+        loginfo( "vertex %ix%i is processed", p.row, p.column );
+    }
+}
+
 void solve_shortest( Map *map, int r, int c ) {
+    Border entered_from = entered_maze_from( map, r, c );
+    if ( (int)entered_from == -1 ) {
+        // TODO: log the problem
+        return;
+    }
+
     AllExits *exits = init_all_exits();
     if ( load_all_exits( map, r, c, exits ) == -1 ) {
         // TODO: log teh problem
@@ -562,18 +684,79 @@ void solve_shortest( Map *map, int r, int c ) {
         return;
     }
 
-    // TODO for each exit, find the shortest path using the dijkstra algorithm
-    // if the next path is shorter that the last one, free the last one and
-    // store the new one
+    Position start = { .row = r, .column = c };
+
+    Position *shortest_exit = NULL;
+    Vertex *shortest_vertex = NULL;
+    Vertex *shortest_distances = NULL;
 
     for ( int i = 0; i < exits->amount; i++ ) {
-        Position p = exits->exits[ i ];
-        loginfo( "found exit at %ix%i", p.row, p.column );
+        Position *end = &exits->exits[ i ];
+        loginfo( "found exit at %ix%i", end->row, end->column );
+
+        int amount_of_vertices = map->rows * map->cols;
+        Vertex *distances = malloc( sizeof( Vertex ) * amount_of_vertices );
+        if ( distances == NULL ) {
+            // TODO: log the problem
+            return;
+        }
+
+        init_distances( distances, map, *end );
+
+        find_shortest_path( map, start, *end, distances );
+
+        printf( "exit is located at %ix%i\n", end->row, end->column );
+        for ( int r = 1; r <= map->rows; r++ ) {
+            for ( int c = 1; c <= map->cols; c++ ) {
+                int cell_distance =
+                    distances[ get_cell_idx( map, r, c ) ].distance;
+                printf( "[%02i]", cell_distance );
+            }
+            printf( "\n" );
+        }
+
+        if ( shortest_exit == NULL ) {
+            shortest_exit = end;
+            shortest_distances = distances;
+            int idx =
+                get_cell_idx( map, shortest_exit->row, shortest_exit->column );
+            shortest_vertex = &shortest_distances[ idx ];
+            continue;
+        }
+
+        Vertex *end_vertex =
+            &distances[ get_cell_idx( map, end->row, end->column ) ];
+        if ( end_vertex->distance < shortest_vertex->distance ) {
+            free( shortest_distances );
+
+            shortest_exit = end;
+            shortest_distances = distances;
+            int idx =
+                get_cell_idx( map, shortest_exit->row, shortest_exit->column );
+            shortest_vertex = &shortest_distances[ idx ];
+        }
+
+        free( distances );
+    }
+
+    // TODO: find the shortest path with reversed points to be able to find the
+    // shortest path & act on it
+
+    // act on the shortest path
+
+    printf( "shortest exit is located at %ix%i\n", shortest_exit->row,
+            shortest_exit->column );
+    for ( int r = 1; r <= map->rows; r++ ) {
+        for ( int c = 1; c <= map->cols; c++ ) {
+            int cell_distance =
+                shortest_distances[ get_cell_idx( map, r, c ) ].distance;
+            printf( "[%02i]", cell_distance );
+        }
+        printf( "\n" );
     }
 
     destruct_all_exits( exits );
-
-    // act on the shortest path
+    free( shortest_distances );
 }
 
 /*
