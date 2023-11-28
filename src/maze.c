@@ -7,7 +7,7 @@ Should we validate that entering cell has an entrance?
 
 */
 
-// #define NDEBUG
+#define NDEBUG
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -446,6 +446,22 @@ SHORTEST STRATEGY ALGORITHM
 
 */
 
+bool *init_visited_nodes( Map *map ) {
+    bool *visited_nodes = malloc( sizeof( bool ) * map->rows * map->cols );
+    if ( visited_nodes == NULL ) {
+        loginfo( "failed to allocate visited nodes%i", 0 );
+        return NULL;
+    }
+    for ( int i = 0; i < map->rows * map->cols; i++ ) {
+        visited_nodes[ i ] = false;
+    }
+    return visited_nodes;
+}
+
+/*
+Step taken on maze traversal. Depth represents the amount of steps taken from
+the entrance to teach this position.
+*/
 typedef struct path {
     int r;
     int c;
@@ -473,7 +489,7 @@ void free_path( Path *p ) {
     free( p );
 }
 
-Path *remove_first( Path *p ) {
+Path *remove_head( Path *p ) {
     Path *next = p->next;
 
     p->next = NULL;
@@ -488,12 +504,11 @@ typedef struct {
 } Position;
 
 /*
-returns: Path to the shortest exit from that location
-  [NULL] -> there is no exit at that path
-  [path->depth] -> amount of steps left until exit is met
+returns path to the shortest exit from that location. If returns NULL, there is
+no valid exit.
 */
-Path *solve_shortest( Map *map, int r, int c, bool *visited_nodes,
-                      Position *entrance ) {
+Path *find_shortest( Map *map, int r, int c, bool *visited_nodes,
+                     Position *entrance ) {
     loginfo( "attemting to find shortest path from %ix%i", r, c );
 
     if ( out_of_maze( map, r, c ) ) {
@@ -522,17 +537,14 @@ Path *solve_shortest( Map *map, int r, int c, bool *visited_nodes,
 
         int moved_r = move_r( r, direction );
         int moved_c = move_c( c, direction );
-
         Path *path =
-            solve_shortest( map, moved_r, moved_c, visited_nodes, entrance );
+            find_shortest( map, moved_r, moved_c, visited_nodes, entrance );
 
         if ( path == NULL ) {
             continue;
-        }
-        if ( shortest_path == NULL ) {
+        } else if ( shortest_path == NULL ) {
             shortest_path = path;
-        }
-        if ( shortest_path->depth > path->depth ) {
+        } else if ( shortest_path->depth > path->depth ) {
             free_path( shortest_path );
             shortest_path = path;
         }
@@ -544,13 +556,31 @@ Path *solve_shortest( Map *map, int r, int c, bool *visited_nodes,
     loginfo( "found shortest path from %ix%i ", r, c );
 
     Path *p = init_path( r, c, shortest_path->depth + 1 );
-    if ( shortest_path->depth == 0 ) {
+
+    if ( out_of_maze( map, shortest_path->r, shortest_path->c ) ) {
         free_path( shortest_path );
     } else {
         p->next = shortest_path;
     }
 
     return p;
+}
+
+void solve_shortest( Map *map, int r, int c, on_step_func_t on_step_func ) {
+    bool *visited_nodes = init_visited_nodes( map );
+    if ( visited_nodes == NULL )
+        return;
+
+    Position entrance = { .row = r, .column = c };
+    Path *path = find_shortest( map, r, c, visited_nodes, &entrance );
+    while ( path != NULL ) {
+        on_step_func( path->r, path->c );
+
+        path = remove_head( path );
+    }
+
+    free( visited_nodes );
+    return;
 }
 
 /*
@@ -563,29 +593,10 @@ MAZE SOLVER ENTRYPOINT
 void solve_maze( Map *map, int r, int c, Strategy strategy,
                  on_step_func_t on_step_func ) {
     if ( strategy == SHORTEST ) {
-        bool *visited_nodes = malloc( sizeof( bool ) * map->rows * map->cols );
-        if ( visited_nodes == NULL ) {
-            loginfo( "failed to allocate visited nodes%i", 0 );
-            return;
-        }
-        for ( int i = 0; i < map->rows * map->cols; i++ ) {
-            visited_nodes[ i ] = false;
-        }
-
-        Position entrance = { .row = r, .column = c };
-
-        Path *path = solve_shortest( map, r, c, visited_nodes, &entrance );
-        while ( path != NULL ) {
-            on_step_func( path->r, path->c );
-
-            path = remove_first( path );
-        }
-
-        free( visited_nodes );
-        return;
+        solve_shortest( map, r, c, on_step_func );
+    } else {
+        solve_leftright( map, r, c, strategy, on_step_func );
     }
-
-    solve_leftright( map, r, c, strategy, on_step_func );
 }
 
 /*
