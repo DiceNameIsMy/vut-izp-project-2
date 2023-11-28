@@ -504,7 +504,7 @@ typedef struct {
 } Position;
 
 /*
-returns path to the shortest exit from that location. If returns NULL, there is
+Returns path to the shortest exit from that location. If returns NULL, there is
 no valid exit.
 */
 Path *find_shortest( Map *map, int r, int c, bool *visited_nodes,
@@ -513,12 +513,12 @@ Path *find_shortest( Map *map, int r, int c, bool *visited_nodes,
 
     if ( out_of_maze( map, r, c ) ) {
         bool exits_from_entrance = entrance->row == r || entrance->column == c;
-        if ( !exits_from_entrance ) {
-            loginfo( "exited maze at %ix%i", r, c );
-            return init_path( r, c, 0 );
+        if ( exits_from_entrance ) {
+            loginfo( "went out of maze near the entrance at %ix%i", r, c );
+            return NULL;
         }
-        loginfo( "went out of maze near the entrance at %ix%i", r, c );
-        return NULL;
+        loginfo( "exited maze at %ix%i", r, c );
+        return init_path( r, c, 0 );
     }
 
     int idx = get_cell_idx( map, r, c );
