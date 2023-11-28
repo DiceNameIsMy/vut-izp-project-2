@@ -14,9 +14,6 @@ Should we validate that entering cell has an entrance?
 #include <stdlib.h>
 #include <string.h>
 
-// For Dijkstra's algorithm
-#define INFINITY -1
-
 #ifndef NDEBUG
 #define loginfo( s, ... ) \
     fprintf( stderr, "[INF]" __FILE__ ":%u: " s "\n", __LINE__, __VA_ARGS__ )
@@ -47,8 +44,8 @@ DEFINITONS REQUIRED TO BE DEFINED
 
 cells - each char represents a cell with 3 passages in the maze.
 
-Cell has 3 passages that can have borders that prevent moving through them. It
-is represented by an 8 bit integer. 3 rightmost bits are used. Value of 0
+Cell has 3 `passages` that can have `borders` that prevents moving through them.
+It is represented by an 8 bit integer. 3 rightmost bits are used. Value of 0
 specifies the absence of a border on the passage, and 1 its presence.
 
 First bit (0b001) -> border on the left
@@ -441,6 +438,7 @@ void solve_leftright( Map *map, int r, int c, int leftright,
         steps++;
     }
 }
+
 /*
 
 SHORTEST STRATEGY ALGORITHM
@@ -448,317 +446,111 @@ SHORTEST STRATEGY ALGORITHM
 
 */
 
+typedef struct path {
+    int r;
+    int c;
+    int depth;
+    struct path *next;
+} Path;
+
+Path *init_path( int r, int c, int depth ) {
+    Path *p = malloc( sizeof( Path ) );
+    if ( p == NULL )
+        return NULL;
+
+    p->r = r;
+    p->c = c;
+    p->depth = depth;
+    p->next = NULL;
+
+    return p;
+}
+
+void free_path( Path *p ) {
+    if ( p->next != NULL )
+        free_path( p->next );
+
+    free( p );
+}
+
+Path *remove_first( Path *p ) {
+    Path *next = p->next;
+
+    p->next = NULL;
+    free_path( p );
+
+    return next;
+}
+
 typedef struct {
     int row;
     int column;
 } Position;
 
-typedef struct {
-    int amount;
-    Position *exits;
-} AllExits;
+/*
+returns: Path to the shortest exit from that location
+  [NULL] -> there is no exit at that path
+  [path->depth] -> amount of steps left until exit is met
+*/
+Path *solve_shortest( Map *map, int r, int c, bool *visited_nodes,
+                      Position *entrance ) {
+    loginfo( "attemting to find shortest path from %ix%i", r, c );
 
-AllExits *init_all_exits() {
-    AllExits *all_exits = malloc( sizeof( AllExits ) );
-    if ( all_exits == NULL )
+    if ( out_of_maze( map, r, c ) ) {
+        bool exits_from_entrance = entrance->row == r || entrance->column == c;
+        if ( !exits_from_entrance ) {
+            loginfo( "exited maze at %ix%i", r, c );
+            return init_path( r, c, 0 );
+        }
+        loginfo( "went out of maze near the entrance at %ix%i", r, c );
+        return NULL;
+    }
+
+    int idx = get_cell_idx( map, r, c );
+    bool already_visited = visited_nodes[ idx ];
+    if ( already_visited )
         return NULL;
 
-    all_exits->amount = 0;
-    all_exits->exits = NULL;
-    return all_exits;
-}
+    visited_nodes[ idx ] = true;
 
-int add_exit( AllExits *exits, int r, int c ) {
-    exits->amount++;
-    if ( exits->amount == 0 ) {
-        exits->exits = malloc( sizeof( Position ) );
+    Path *shortest_path = NULL;
+
+    // for each possible direction
+    for ( int direction = 0; direction < BORDER_COUNT; direction++ ) {
+        if ( isborder( map, r, c, direction ) )
+            continue;
+
+        int moved_r = move_r( r, direction );
+        int moved_c = move_c( c, direction );
+
+        Path *path =
+            solve_shortest( map, moved_r, moved_c, visited_nodes, entrance );
+
+        if ( path == NULL ) {
+            continue;
+        }
+        if ( shortest_path == NULL ) {
+            shortest_path = path;
+        }
+        if ( shortest_path->depth > path->depth ) {
+            free_path( shortest_path );
+            shortest_path = path;
+        }
+    }
+
+    if ( shortest_path == NULL )
+        return NULL;
+
+    loginfo( "found shortest path from %ix%i ", r, c );
+
+    Path *p = init_path( r, c, shortest_path->depth + 1 );
+    if ( shortest_path->depth == 0 ) {
+        free_path( shortest_path );
     } else {
-        exits->exits =
-            realloc( exits->exits, sizeof( Position ) * exits->amount );
-    }
-
-    if ( exits->exits == NULL )
-        return -1;
-
-    Position p = { .row = r, .column = c };
-    exits->exits[ exits->amount - 1 ] = p;
-
-    return 0;
-}
-
-void destruct_all_exits( AllExits *exits ) {
-    free( exits->exits );
-    free( exits );
-}
-
-/*
-Load all cell locations that contain an open passage out of the maze
-
-Might find 2 positions with the same coordinates when there are 2 open passages
-out of the maze
-*/
-int load_all_exits( Map *map, int r, int c, AllExits *exits ) {
-    for ( int row = 1; row <= map->rows; row++ ) {
-        // for each leftmost cell
-        if ( row == r && c == 1 )
-            continue;
-
-        bool has_exit_on_left = !has_left_border( get_cell( map, row, 1 ) );
-        if ( has_exit_on_left ) {
-            if ( add_exit( exits, row, 1 ) == -1 ) {
-                destruct_all_exits( exits );
-                return -1;
-            }
-        }
-
-        // for each rightmost cell
-        if ( row == r && c == map->cols )
-            continue;
-
-        bool has_exit_on_right =
-            !has_right_border( get_cell( map, row, map->cols ) );
-        if ( has_exit_on_right ) {
-            if ( add_exit( exits, row, map->cols ) == -1 ) {
-                destruct_all_exits( exits );
-                return -1;
-            }
-        }
-    }
-
-    for ( int col = 1; col <= map->cols; col++ ) {
-        // for each uppermost cell
-        if ( col == c && r == 1 )
-            continue;
-
-        bool has_exit_above = has_passage_above( 1, col ) &&
-                              !has_updown_border( get_cell( map, 1, col ) );
-        if ( has_exit_above ) {
-            if ( add_exit( exits, 1, col ) == -1 ) {
-                destruct_all_exits( exits );
-                return -1;
-            }
-        }
-
-        // for each cell on the bottom
-        if ( col == c && r == map->rows )
-            continue;
-
-        bool has_exit_below =
-            !has_passage_above( map->rows, col ) &&
-            !has_updown_border( get_cell( map, map->rows, col ) );
-        if ( has_exit_below ) {
-            if ( add_exit( exits, map->rows, col ) == -1 ) {
-                destruct_all_exits( exits );
-                return -1;
-            }
-        }
-    }
-
-    return 0;
-}
-
-typedef struct {
-    bool processed;
-    int distance;
-} Vertex;
-
-void init_distances( Vertex *distances, Map *map, Position start ) {
-    int amount_of_vertices = map->rows * map->cols;
-    for ( int i = 0; i < amount_of_vertices; i++ ) {
-        Vertex v = { .processed = false, .distance = INFINITY };
-        distances[ i ] = v;
-    }
-
-    int start_idx = get_cell_idx( map, start.row, start.column );
-    distances[ start_idx ].distance = 0;
-}
-
-Position get_lowest_vertex_position( Map *map, Vertex *distances ) {
-    Position p = { .row = -1, .column = -1 };
-    Vertex *v = NULL;
-
-    for ( int r = 1; r <= map->rows; r++ ) {
-        for ( int c = 1; c <= map->cols; c++ ) {
-            int next_idx = get_cell_idx( map, r, c );
-            Vertex *next_vertex = &distances[ next_idx ];
-            if ( next_vertex->processed || next_vertex->distance == INFINITY )
-                continue;
-
-            if ( v == NULL || v->distance == INFINITY ||
-                 v->distance > next_vertex->distance ) {
-                p.row = r;
-                p.column = c;
-                v = next_vertex;
-            }
-        }
+        p->next = shortest_path;
     }
 
     return p;
-}
-
-void process_edge( Map *map, Vertex *distances, Position from,
-                   Border direction ) {
-    loginfo( "processing a vertex %ix%i moving %s", from.row, from.column,
-             border_str[ direction ] );
-    if ( direction == UP && !has_passage_above( from.row, from.column ) ) {
-        return;
-    }
-    if ( direction == DOWN && has_passage_above( from.row, from.column ) ) {
-        return;
-    }
-
-    if ( isborder( map, from.row, from.column, direction ) ) {
-        loginfo( "can not move %s because of a border",
-                 border_str[ direction ] );
-        return;
-    }
-
-    if ( moves_out_of_maze( map, from.row, from.column, direction ) ) {
-        loginfo( "can not move %s because of moving out if the maze",
-                 border_str[ direction ] );
-        return;
-    }
-
-    Vertex *v_from = &distances[ get_cell_idx( map, from.row, from.column ) ];
-
-    Position pos_to = { .row = move_r( from.row, direction ),
-                        .column = move_c( from.column, direction ) };
-    Vertex *v_to = &distances[ get_cell_idx( map, pos_to.row, pos_to.column ) ];
-
-    bool is_unset = v_to->distance == INFINITY;
-    bool new_path_is_shorter = v_to->distance > ( v_from->distance + 1 );
-
-    if ( is_unset || new_path_is_shorter ) {
-        v_to->distance = v_from->distance + 1;
-        loginfo( "set %ix%i to a distance of %i", pos_to.row, pos_to.column,
-                 v_to->distance );
-    }
-}
-
-int find_shortest_path( Map *map, Position start, Position end,
-                        Vertex *distances ) {
-    while ( true ) {
-        Position p = get_lowest_vertex_position( map, distances );
-
-        if ( p.row == -1 && p.column == -1 ) {
-            loginfo( "failed to find a way to exit a maze by starting at %ix%i "
-                     "(not sure)",
-                     start.row, start.column );
-            return -1;
-        }
-        if ( p.row == end.row && p.column == end.column ) {
-            loginfo( "vertex with lowest value at %ix%i is the end", p.row,
-                     p.column );
-            return 0;
-        }
-
-        Vertex *v = &distances[ get_cell_idx( map, p.row, p.column ) ];
-
-        loginfo( "next vertex: %ix%i distance from origin: %i", p.row, p.column,
-                 v->distance );
-
-        process_edge( map, distances, p, LEFT );
-        process_edge( map, distances, p, RIGHT );
-        process_edge( map, distances, p, UP );
-        process_edge( map, distances, p, DOWN );
-
-        v->processed = true;
-        loginfo( "vertex %ix%i is processed", p.row, p.column );
-    }
-}
-
-void solve_shortest( Map *map, int r, int c ) {
-    Border entered_from = entered_maze_from( map, r, c );
-    if ( (int)entered_from == -1 ) {
-        // TODO: log the problem
-        return;
-    }
-
-    AllExits *exits = init_all_exits();
-    if ( load_all_exits( map, r, c, exits ) == -1 ) {
-        // TODO: log teh problem
-        destruct_all_exits( exits );
-    }
-
-    if ( exits->amount == 0 ) {
-        // TODO: log the problem
-        return;
-    }
-
-    Position start = { .row = r, .column = c };
-
-    Position *shortest_exit = NULL;
-    Vertex *shortest_vertex = NULL;
-    Vertex *shortest_distances = NULL;
-
-    for ( int i = 0; i < exits->amount; i++ ) {
-        Position *end = &exits->exits[ i ];
-        loginfo( "found cell with exit at %ix%i", end->row, end->column );
-
-        int amount_of_vertices = map->rows * map->cols;
-        Vertex *distances = malloc( sizeof( Vertex ) * amount_of_vertices );
-        if ( distances == NULL ) {
-            // TODO: log the problem
-            return;
-        }
-
-        init_distances( distances, map, start );
-
-        find_shortest_path( map, start, *end, distances );
-
-        printf( "exit is located at %ix%i\n", end->row, end->column );
-        for ( int r = 1; r <= map->rows; r++ ) {
-            for ( int c = 1; c <= map->cols; c++ ) {
-                int cell_distance =
-                    distances[ get_cell_idx( map, r, c ) ].distance;
-                printf( "[%02i]", cell_distance );
-            }
-            printf( "\n" );
-        }
-
-        if ( shortest_exit == NULL ) {
-            shortest_exit = end;
-            shortest_distances = distances;
-            int idx =
-                get_cell_idx( map, shortest_exit->row, shortest_exit->column );
-            shortest_vertex = &shortest_distances[ idx ];
-            continue;
-        }
-
-        Vertex *end_vertex =
-            &distances[ get_cell_idx( map, end->row, end->column ) ];
-        if ( end_vertex->distance < shortest_vertex->distance ) {
-            free( shortest_distances );
-
-            shortest_exit = end;
-            shortest_distances = distances;
-            int idx =
-                get_cell_idx( map, shortest_exit->row, shortest_exit->column );
-            shortest_vertex = &shortest_distances[ idx ];
-            continue;
-        }
-
-        free( distances );
-    }
-
-    // TODO: find the shortest path with reversed points to be able to find the
-    // shortest path & act on it
-
-    // act on the shortest path
-
-    printf( "shortest exit is located at %ix%i\n", shortest_exit->row,
-            shortest_exit->column );
-    for ( int r = 1; r <= map->rows; r++ ) {
-        for ( int c = 1; c <= map->cols; c++ ) {
-            int cell_distance =
-                shortest_distances[ get_cell_idx( map, r, c ) ].distance;
-            printf( "[%02i]", cell_distance );
-        }
-        printf( "\n" );
-    }
-
-    destruct_all_exits( exits );
-    free( shortest_distances );
 }
 
 /*
@@ -771,7 +563,25 @@ MAZE SOLVER ENTRYPOINT
 void solve_maze( Map *map, int r, int c, Strategy strategy,
                  on_step_func_t on_step_func ) {
     if ( strategy == SHORTEST ) {
-        solve_shortest( map, r, c );
+        bool *visited_nodes = malloc( sizeof( bool ) * map->rows * map->cols );
+        if ( visited_nodes == NULL ) {
+            loginfo( "failed to allocate visited nodes%i", 0 );
+            return;
+        }
+        for ( int i = 0; i < map->rows * map->cols; i++ ) {
+            visited_nodes[ i ] = false;
+        }
+
+        Position entrance = { .row = r, .column = c };
+
+        Path *path = solve_shortest( map, r, c, visited_nodes, &entrance );
+        while ( path != NULL ) {
+            on_step_func( path->r, path->c );
+
+            path = remove_first( path );
+        }
+
+        free( visited_nodes );
         return;
     }
 
